@@ -20,7 +20,7 @@ from tensorflow.python.platform import gfile
 FLAGS = None
 
 def main(_):
-  tf.logging.set_verbosity(tf.logging.INFO)
+  tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
   # Create directories to store TensorBoard summaries 
   utils.create_tensorboard_directories(FLAGS.summaries_dir)
 
@@ -37,10 +37,10 @@ def main(_):
   class_count = len(image_lists.keys())
 
   if class_count == 0:
-    tf.logging.error("No valid folders of images found at " + FLAGS.images)
+    tf.compat.v1.logging.error("No valid folders of images found at " + FLAGS.images)
     return -1
   if class_count == 1:
-    tf.logging.error("Only one valid folder of images found at " +
+    tf.compat.v1.logging.error("Only one valid folder of images found at " +
                      FLAGS.images +
                      " - multiple classes are needed for classification.")
     return -1
@@ -49,7 +49,7 @@ def main(_):
   with gfile.FastGFile(FLAGS.output_labels, "w") as f:
     f.write("\n".join(image_lists.keys()) + "\n")
 
-  with tf.Session(graph=graph) as sess:
+  with tf.compat.v1.Session(graph=graph) as sess:
     # Set up the image decoding sub-graph.
     jpeg_data_tensor, decoded_image_tensor = utils.decode_jpeg(
       model_config["input_width"], model_config["input_height"],
@@ -72,14 +72,14 @@ def main(_):
     evaluation_step, prediction, probability = train.create_evaluation_graph(
       final_tensor, ground_truth_input)
 
-    merged = tf.summary.merge_all()
-    train_writer = tf.summary.FileWriter(FLAGS.summaries_dir + "/train",
+    merged = tf.compat.v1.summary.merge_all()
+    train_writer = tf.compat.v1.summary.FileWriter(FLAGS.summaries_dir + "/train",
                                            sess.graph)
 
-    validation_writer = tf.summary.FileWriter(FLAGS.summaries_dir + "/validation")
+    validation_writer = tf.compat.v1.summary.FileWriter(FLAGS.summaries_dir + "/validation")
 
     # Initialize all variables
-    init = tf.global_variables_initializer()
+    init = tf.compat.v1.global_variables_initializer()
     sess.run(init)
 
     best_acc = 0.0
@@ -123,7 +123,7 @@ def main(_):
             
         validation_writer.add_summary(validation_summary, i)
 
-        tf.logging.info("Step {}: loss = {} train acc = {} val acc = {}". format(
+        tf.compat.v1.logging.info("Step {}: loss = {} train acc = {} val acc = {}". format(
           i, cross_entropy_value, train_accuracy, validation_accuracy))
 
     # Training complete. Run final evaluation on test set
@@ -138,8 +138,8 @@ def main(_):
       [evaluation_step, prediction, probability],
       feed_dict={bottleneck_input: test_bottlenecks,
                  ground_truth_input: test_ground_truth})
-    tf.logging.info("Best validation accuracy = {}".format(best_acc * 100))
-    tf.logging.info("Final test accuracy =  {}".format(test_accuracy * 100))
+    tf.compat.v1.logging.info("Best validation accuracy = {}".format(best_acc * 100))
+    tf.compat.v1.logging.info("Final test accuracy =  {}".format(test_accuracy * 100))
 
   time_elapsed = time.time() - since
 
@@ -239,4 +239,4 @@ if __name__ == "__main__":
       help="The name of the output classification layer in the retrained graph."
   )
   FLAGS, unparsed = parser.parse_known_args()
-  tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)
+  tf.compat.v1.app.run(main=main, argv=[sys.argv[0]] + unparsed)

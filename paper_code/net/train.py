@@ -107,7 +107,7 @@ def create_bottleneck(bottleneck_path, image_lists, label_name, index,
  
   bottleneck_string = ",".join(str(x) for x in bottleneck_values)
 
-  bottleneck_directory = "/".join(bottleneck_path.split("/")[:-1])
+  bottleneck_directory = "\\".join(bottleneck_path.split("\\")[:-1])
 
   utils.create_directory(bottleneck_directory)
 

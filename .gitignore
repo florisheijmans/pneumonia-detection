@@ -129,3 +129,4 @@ dmypy.json
 .pyre/
 
 chest_xray
+images

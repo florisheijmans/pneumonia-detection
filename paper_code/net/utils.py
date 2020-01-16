@@ -129,7 +129,7 @@ def create_tensorboard_directories(summaries_dir):
   tf.gfile.MakeDirs(summaries_dir)
 
 # Returns tensors to feed jpeg data into
-def decode_jpeg(input_width, input_height, input_depth, input_mean,input_std):
+def decode_jpeg(input_width, input_height, input_depth, input_mean, input_std):
   jpeg_data = tf.placeholder(tf.string, name="DecodeJPEGInput")
   decoded_image = tf.image.decode_jpeg(jpeg_data, channels=input_depth)
   decoded_image_as_float = tf.cast(decoded_image, dtype=tf.float32)
