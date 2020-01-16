@@ -10,7 +10,7 @@ import numpy as np
 from tensorflow.python.platform import gfile
 
 MAX_NUM_IMAGES_PER_CLASS = 2 ** 27 - 1
-
+ 
 # Return dict of model info
 def get_model_config():
   inception_url = "http://download.tensorflow.org/models/image/imagenet/inception-2015-12-05.tgz"
