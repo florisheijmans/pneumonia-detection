@@ -86,24 +86,30 @@ def get_train_image_data():
     viral_data = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
-        normal_data.append((img,0))
+        normal_data.append((img, 0))
     for img in bacterial_cases:
         bact_data.append((img, 1))
     for img in viral_cases:
         viral_data.append((img, 2))
 
-    # Convert to pandas data frame
-    normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # Randomise the order
-    normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    bact_data_list = bact_data_data.sample(frac=1.).reset_index(drop=True)
-    viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
+
+    normal_data_list = normal_data
+    bact_data_list = bact_data
+    viral_data_list = viral_data
+
+    # # Convert to pandas data frame
+    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
+    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
+    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
+    # # Randomise the order
+    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
+    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
+    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
     # Check the data frame
-    print(normal_data_list.head())
-    print(bact_data_list.head())
-    print(viral_data_list.head())
+    # print("train data")
+    # print(f"normal:\n {normal_data_list.head()}")
+    # print(f"bacterial:\n {bact_data_list.head()}")
+    # print(f"viral:\n {viral_data_list.head()}")
 
     return normal_data_list, bact_data_list, viral_data_list
 
@@ -123,24 +129,30 @@ def get_val_image_data():
     viral_data = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
-        normal_data.append((img,0))
+        normal_data.append((img, 0))
     for img in bacterial_cases:
         bact_data.append((img, 1))
     for img in viral_cases:
         viral_data.append((img, 2))
 
-    # Convert to pandas data frame
-    normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # Randomise the order
-    normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    bact_data_list = bact_data_data.sample(frac=1.).reset_index(drop=True)
-    viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
+
+    normal_data_list = normal_data
+    bact_data_list = bact_data
+    viral_data_list = viral_data
+
+    # # Convert to pandas data frame
+    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
+    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
+    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
+    # # Randomise the order
+    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
+    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
+    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
     # Check the data frame
-    print(normal_data_list.head())
-    print(bact_data_list.head())
-    print(viral_data_list.head())
+    # print("val data")
+    # print(f"normal:\n {normal_data_list.head()}")
+    # print(f"bacterial:\n {bact_data_list.head()}")
+    # print(f"viral:\n {viral_data_list.head()}")
 
     return normal_data_list, bact_data_list, viral_data_list
 
@@ -160,24 +172,30 @@ def get_test_image_data():
     viral_data = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
-        normal_data.append((img,0))
+        normal_data.append((img, 0))
     for img in bacterial_cases:
         bact_data.append((img, 1))
     for img in viral_cases:
         viral_data.append((img, 2))
 
-    # Convert to pandas data frame
-    normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # Randomise the order
-    normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    bact_data_list = bact_data_data.sample(frac=1.).reset_index(drop=True)
-    viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
+
+    normal_data_list = normal_data
+    bact_data_list = bact_data
+    viral_data_list = viral_data
+    
+    # # Convert to pandas data frame
+    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
+    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
+    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
+    # # Randomise the order
+    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
+    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
+    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
     # Check the data frame
-    print(normal_data_list.head())
-    print(bact_data_list.head())
-    print(viral_data_list.head())
+    # print("test data")
+    # print(f"normal:\n {normal_data_list.head()}")
+    # print(f"bacterial:\n {bact_data_list.head()}")
+    # print(f"viral:\n {viral_data_list.head()}")
 
     return normal_data_list, bact_data_list, viral_data_list
 
@@ -188,11 +206,21 @@ test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_test_ima
 
 
 def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
+    # Initialise lists
+    normal_data = []
+    normal_labels = []
+    bact_data = []
+    bact_labels = []
+    viral_data = []
+    viral_labels = []
+
     # Normal cases
     for img in normal_cases:
-        img = cv2.imread(str(img))
+        print(f"before imread:\n {img}")
+        img = cv2.imread(str(img[0]))
+        print(f"before resize:\n {img}")
         img = cv2.resize(img, (299,299))
-        if img.shape[2] ==1:
+        if img.shape[2] == 1:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
@@ -202,9 +230,9 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
                         
     # Bacterial cases        
     for img in bact_cases:
-        img = cv2.imread(str(img))
+        img = cv2.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
-        if img.shape[2] ==1:
+        if img.shape[2] == 1:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
@@ -214,9 +242,9 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
 
     # Viral cases        
     for img in bact_cases:
-        img = cv2.imread(str(img))        
+        img = cv2.imread(str(img[0]))        
         img = cv2.resize(img, (299,299))
-        if img.shape[2] ==1:
+        if img.shape[2] == 1:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
@@ -225,11 +253,17 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
         viral_labels.append(label)
         
     # Convert the list into numpy arrays
-    valid_data = np.array(valid_data)
-    valid_labels = np.array(valid_labels)
+    normal_data = np.array(normal_data)
+    normal_labels = np.array(normal_labels)
+    bact_data = np.array(bact_data)
+    bact_labels = np.array(bact_labels)
+    viral_data = np.array(viral_data)
+    viral_labels = np.array(viral_labels)
 
-    print("Total number of validation examples: ", valid_data.shape)
-    print("Total number of labels:", valid_labels.shape)
+    #print("Total number of validation examples: ", valid_data.shape)
+    #print("Total number of labels:", valid_labels.shape)
+
+decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
 
 def get_image_generators():
     # Decompose images
