@@ -53,8 +53,6 @@ K.set_session(sess)
 # Make the augmentation sequence deterministic
 aug.seed(111)
 
-
-
 total_train_imgs = 5098
 total_val_imgs = 519
 
@@ -63,62 +61,20 @@ def get_hyperparameters():
 
 # Define hyperparameters
 img_width, img_height = 299, 299
-train_data_dir = Path('/Users/euan/documenten/studie/blok2.2/pattern_recognition/project/pneumonia-babies/chest_xray/images/train')
-val_data_dir = Path('/Users/euan/documenten/studie/blok2.2/pattern_recognition/project/pneumonia-babies/chest_xray/images/val')
-test_data_dir = Path('/Users/euan/documenten/studie/blok2.2/pattern_recognition/project/pneumonia-babies/chest_xray/images/test')
+train_data_dir = Path("chest_xray/images/train")
+val_data_dir = Path("chest_xray/images/val")
+test_data_dir = Path("chest_xray/images/test")
 batch_size = 16
 nb_epochs = 10
 nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
 
-def get_train_image_data():
+
+def get_image_data(data_dir):
     # Dirs
-    norm_dir = train_data_dir / 'NORMAL'
-    bact_dir = train_data_dir / 'BACTERIA'
-    viral_dir = train_data_dir / 'VIRUS'
-    # Get the list of all the images
-    normal_cases = norm_dir.glob('*.jpeg')
-    bacterial_cases = bact_dir.glob('*.jpeg')
-    viral_cases = viral_dir.glob('*.jpeg')
-
-    # Initialise lists to put all the images in, along with their labels: (img, label)
-    normal_data = []
-    bact_data = []
-    viral_data = []
-    # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
-    for img in normal_cases:
-        normal_data.append((img, 0))
-    for img in bacterial_cases:
-        bact_data.append((img, 1))
-    for img in viral_cases:
-        viral_data.append((img, 2))
-
-
-    normal_data_list = normal_data
-    bact_data_list = bact_data
-    viral_data_list = viral_data
-
-    # # Convert to pandas data frame
-    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # # Randomise the order
-    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
-    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
-    # Check the data frame
-    # print("train data")
-    # print(f"normal:\n {normal_data_list.head()}")
-    # print(f"bacterial:\n {bact_data_list.head()}")
-    # print(f"viral:\n {viral_data_list.head()}")
-
-    return normal_data_list, bact_data_list, viral_data_list
-
-def get_val_image_data():
-    # Dirs
-    norm_dir = val_data_dir / 'NORMAL'
-    bact_dir = val_data_dir / 'BACTERIA'
-    viral_dir = val_data_dir / 'VIRUS'
+    norm_dir = data_dir / 'NORMAL'
+    bact_dir = data_dir / 'BACTERIA'
+    viral_dir = data_dir / 'VIRUS'
     # Get the list of all the images
     normal_cases = norm_dir.glob('*.jpeg')
     bacterial_cases = bact_dir.glob('*.jpeg')
@@ -154,57 +110,15 @@ def get_val_image_data():
     # print(f"normal:\n {normal_data_list.head()}")
     # print(f"bacterial:\n {bact_data_list.head()}")
     # print(f"viral:\n {viral_data_list.head()}")
-
-    return normal_data_list, bact_data_list, viral_data_list
-
-def get_test_image_data():
-    # Dirs
-    norm_dir = test_data_dir / 'NORMAL'
-    bact_dir = test_data_dir / 'BACTERIA'
-    viral_dir = test_data_dir / 'VIRUS'
-    # Get the list of all the images
-    normal_cases = norm_dir.glob('*.jpeg')
-    bacterial_cases = bact_dir.glob('*.jpeg')
-    viral_cases = viral_dir.glob('*.jpeg')
-
-    # Initialise lists to put all the images in, along with their labels: (img, label)
-    normal_data = []
-    bact_data = []
-    viral_data = []
-    # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
-    for img in normal_cases:
-        normal_data.append((img, 0))
-    for img in bacterial_cases:
-        bact_data.append((img, 1))
-    for img in viral_cases:
-        viral_data.append((img, 2))
-
-
-    normal_data_list = normal_data
-    bact_data_list = bact_data
-    viral_data_list = viral_data
-    
-    # # Convert to pandas data frame
-    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # # Randomise the order
-    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
-    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
-    # Check the data frame
-    # print("test data")
-    # print(f"normal:\n {normal_data_list.head()}")
-    # print(f"bacterial:\n {bact_data_list.head()}")
-    # print(f"viral:\n {viral_data_list.head()}")
-
+    print("Got all image data from ", data_dir)
     return normal_data_list, bact_data_list, viral_data_list
 
 # Get lists
-tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list = get_train_image_data()
-val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list  = get_val_image_data()
-test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_test_image_data()
-
+print("Getting all image lists.")
+tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list = get_image_data(train_data_dir)
+val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list  = get_image_data(val_data_dir)
+test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_image_data(test_data_dir)
+print("Completed getting all image lists.")
 
 def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
 
@@ -218,60 +132,38 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
     # viral_data = []
     # viral_labels = []
 
-    # Normal cases
-    for img in normal_cases:
-        img = mimg.imread(str(img[0]))
-        img = cv2.resize(img, (299,299))
-        if len(img) <= 2:
-            img = np.dstack([img, img, img])
-        else:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32)/255.
-        label = to_categorical(0, num_classes=3)
-        all_data.append(img)
-        all_labels.append(label)
-                        
-    # Bacterial cases        
-    for img in bact_cases:
-        img = mimg.imread(str(img[0]))
-        img = cv2.resize(img, (299,299))
-        if len(img) <= 2:
-            img = np.dstack([img, img, img])
-        else:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32)/255.
-        label = to_categorical(1, num_classes=3)
-        all_data.append(img)
-        all_labels.append(label)
+    """ append all images to all_data and all_labels"""
+    cases = [normal_cases, bact_cases, viral_cases]
+    for case in range(3):
+        counter = 0
+        for img in cases[case]:
+            img = mimg.imread(str(img[0]))
+            img = cv2.resize(img, (299,299))
+            if len(img) <= 2:
+                img = np.dstack([img, img, img])
+            else:
+                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = img.astype(np.float32)/255.
+            label = to_categorical(case, num_classes=3)
+            all_data.append(img)
+            all_labels.append(label)
+            counter += 1
+            if (counter % 100 == 0):
+                print(counter, "from class", case)
 
-    # Viral cases        
-    for img in bact_cases:
-        img = mimg.imread(str(img[0]))
-        img = cv2.resize(img, (299,299))
-        if len(img) <= 2:
-            img = np.dstack([img, img, img])
-        else:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32)/255.
-        label = to_categorical(2, num_classes=3)
-        all_data.append(img)
-        all_labels.append(label)
-        
     # Convert the list into numpy arrays
     all_data = np.array(all_data)
     all_labels = np.array(all_labels)
-    # normal_data = np.array(normal_data)
-    # normal_labels = np.array(normal_labels)
-    # bact_data = np.array(bact_data)
-    # bact_labels = np.array(bact_labels)
-    # viral_data = np.array(viral_data)
-    # viral_labels = np.array(viral_labels)
 
     # return (normal_data, normal_labels), (bact_data, bact_labels), (viral_data, viral_labels)
+
+    print("Decoded all images to data")
     return all_data, all_labels
 
+print("Decoding all imgs to data.")
 tr_data, tr_labels = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
 val_data, val_labels = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+print("Finished decoding all imgs to data.")
 #tr_norm, tr_bact, tr_viral = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
 #val_norm, val_bact, val_viral = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
 #test_norm, test_bact, test_viral = decode_imgs_to_data(test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list)
@@ -324,9 +216,9 @@ def create_model():
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-                include_top=False, 
-                weights='imagenet', 
-                input_shape=(299, 299, 3), 
+                include_top=False,
+                weights='imagenet',
+                input_shape=(299, 299, 3),
                 pooling='avg'
                 )
     # Freeze layers
@@ -343,7 +235,7 @@ def create_model():
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
     final_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
-    
+
     train_dat = np.append(tr_data, tr_labels)
     val_dat = np.append(val_data, val_labels)
 
