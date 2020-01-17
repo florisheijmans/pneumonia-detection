@@ -206,6 +206,7 @@ test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_test_ima
 
 
 def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
+
     # Initialise lists
     normal_data = []
     normal_labels = []
@@ -216,11 +217,9 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
 
     # Normal cases
     for img in normal_cases:
-        print(f"before imread:\n {img}")
-        img = cv2.imread(str(img[0]))
-        print(f"before resize:\n {img}")
+        img = mimg.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
-        if img.shape[2] == 1:
+        if len(img) <= 2:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
@@ -230,25 +229,25 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
                         
     # Bacterial cases        
     for img in bact_cases:
-        img = cv2.imread(str(img[0]))
+        img = mimg.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
-        if img.shape[2] == 1:
+        if len(img) <= 2:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(1, num_classes=2)
+        label = to_categorical(0, num_classes=2)
         bact_data.append(img)
         bact_labels.append(label)
 
     # Viral cases        
     for img in bact_cases:
-        img = cv2.imread(str(img[0]))        
+        img = mimg.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
-        if img.shape[2] == 1:
+        if len(img) <= 2:
             img = np.dstack([img, img, img])
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(1, num_classes=2)
+        label = to_categorical(0, num_classes=2)
         viral_data.append(img)
         viral_labels.append(label)
         
@@ -260,10 +259,18 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
     viral_data = np.array(viral_data)
     viral_labels = np.array(viral_labels)
 
-    #print("Total number of validation examples: ", valid_data.shape)
-    #print("Total number of labels:", valid_labels.shape)
+    return (normal_data, normal_labels), (bact_data, bact_labels), (viral_data, viral_labels)
 
-decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+
+#decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
+norm, bact, viral = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+#decode_imgs_to_data(test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list)
+
+print(f"norm:\n {norm[0][:5]}")
+print(f"bact:\n {bact[0][:5]}")
+print(f"viral:\n {viral[0][:5]}")
+
+
 
 def get_image_generators():
     # Decompose images
