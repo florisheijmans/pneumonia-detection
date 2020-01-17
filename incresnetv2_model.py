@@ -17,6 +17,7 @@ from pathlib import Path
 from skimage.io import imread
 from skimage.transform import resize
 from keras.models import Sequential, Model
+from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
 from keras.models import Sequential
@@ -208,12 +209,14 @@ test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_test_ima
 def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
 
     # Initialise lists
-    normal_data = []
-    normal_labels = []
-    bact_data = []
-    bact_labels = []
-    viral_data = []
-    viral_labels = []
+    all_data = []
+    all_labels = []
+    # normal_data = []
+    # normal_labels = []
+    # bact_data = []
+    # bact_labels = []
+    # viral_data = []
+    # viral_labels = []
 
     # Normal cases
     for img in normal_cases:
@@ -221,11 +224,12 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
         img = cv2.resize(img, (299,299))
         if len(img) <= 2:
             img = np.dstack([img, img, img])
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(0, num_classes=2)
-        normal_data.append(img)
-        normal_labels.append(label)
+        label = to_categorical(0, num_classes=3)
+        all_data.append(img)
+        all_labels.append(label)
                         
     # Bacterial cases        
     for img in bact_cases:
@@ -233,11 +237,12 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
         img = cv2.resize(img, (299,299))
         if len(img) <= 2:
             img = np.dstack([img, img, img])
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(0, num_classes=2)
-        bact_data.append(img)
-        bact_labels.append(label)
+        label = to_categorical(1, num_classes=3)
+        all_data.append(img)
+        all_labels.append(label)
 
     # Viral cases        
     for img in bact_cases:
@@ -245,30 +250,44 @@ def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
         img = cv2.resize(img, (299,299))
         if len(img) <= 2:
             img = np.dstack([img, img, img])
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(0, num_classes=2)
-        viral_data.append(img)
-        viral_labels.append(label)
+        label = to_categorical(2, num_classes=3)
+        all_data.append(img)
+        all_labels.append(label)
         
     # Convert the list into numpy arrays
-    normal_data = np.array(normal_data)
-    normal_labels = np.array(normal_labels)
-    bact_data = np.array(bact_data)
-    bact_labels = np.array(bact_labels)
-    viral_data = np.array(viral_data)
-    viral_labels = np.array(viral_labels)
+    all_data = np.array(all_data)
+    all_labels = np.array(all_labels)
+    # normal_data = np.array(normal_data)
+    # normal_labels = np.array(normal_labels)
+    # bact_data = np.array(bact_data)
+    # bact_labels = np.array(bact_labels)
+    # viral_data = np.array(viral_data)
+    # viral_labels = np.array(viral_labels)
 
-    return (normal_data, normal_labels), (bact_data, bact_labels), (viral_data, viral_labels)
+    # return (normal_data, normal_labels), (bact_data, bact_labels), (viral_data, viral_labels)
+    return all_data, all_labels
 
+tr_data, tr_labels = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
+val_data, val_labels = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+#tr_norm, tr_bact, tr_viral = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
+#val_norm, val_bact, val_viral = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+#test_norm, test_bact, test_viral = decode_imgs_to_data(test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list)
 
-#decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
-norm, bact, viral = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
-#decode_imgs_to_data(test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list)
+# print(f"norm:\n {tr_norm[0][1]}")
+# print(f"bact:\n {tr_bact[0][1]}")
+# print(f"viral:\n {tr_viral[0][1]}")
 
-print(f"norm:\n {norm[0][:5]}")
-print(f"bact:\n {bact[0][:5]}")
-print(f"viral:\n {viral[0][:5]}")
+# print(f"norm len: {len(tr_norm[0])}")
+# print(f"bact len: {len(tr_bact[0])}")
+# print(f"viral len: {len(tr_viral[0])}")
+
+print(f"norm:\n {tr_data[0]}")
+print(f"labels:\n {tr_labels[0]}")
+print(f"norm len: {len(tr_data[0])}")
+print(f"labels len: {len(tr_labels[0])}")
 
 
 
@@ -302,6 +321,7 @@ def get_image_files(image_dir):
   return sorted(fs)
 
 def create_model():
+    print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
                 include_top=False, 
@@ -324,17 +344,20 @@ def create_model():
     final_model = Model(inputs=model.input, outputs = predictions)
     final_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     
+    train_dat = np.append(tr_data, tr_labels)
+    val_dat = np.append(val_data, val_labels)
+
     # Fit the model
     final_model.fit_generator(
-                train_generator,
+                train_dat,
                 steps_per_epoch = nb_train_steps,
                 epochs = nb_epochs,
-                validation_data = validation_generator,
+                validation_data = val_dat,
                 validation_steps = nb_val_steps
                 #callbacks = [checkpoint, early]
                 )
 
     return final_model
 
-#res_model = create_model()
+res_model = create_model()
 #res_model.summary()
