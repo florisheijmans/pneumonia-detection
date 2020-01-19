@@ -172,6 +172,8 @@ def data_gen(data, batch_size):
                 break
             
         i+=1
+        print(batch_data)
+        print(batch_labels)
         yield batch_data, batch_labels
             
         if i>=steps:
@@ -185,6 +187,7 @@ def decode_imgs_to_data(cases):
     # Append all images to dat and labels
     counter = 0
     for img in cases:
+        label = to_categorical(img[1], num_classes=3)
         img = mimg.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
         if len(img) <= 2:
@@ -192,12 +195,11 @@ def decode_imgs_to_data(cases):
         else:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(img[1], num_classes=3)
         dat.append(img)
         labels.append(label)
         counter += 1
         if (counter % 100 == 0):
-            print(counter, "from class", img[1])
+            print(counter, "from class", label)
 
     # Convert the list into numpy arrays
     dat = np.array(dat)
@@ -264,9 +266,8 @@ def create_model():
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-        include_top=False,
+        include_top=True,
         weights='imagenet',
-        input_shape=(299, 299, 3),
         pooling='avg'
     )
     # Freeze layers
@@ -275,9 +276,15 @@ def create_model():
 
     # Add trainable layers to the model
     x = model.output
+    print("model shape")
+    print(x.shape)
     #x = Flatten()(x)
     x = Dense(1024, activation='relu')(x)
+    x = Dropout(0.7, name='dropout1')(x)
     x = Dense(512, activation='relu')(x)
+    x = Dropout(0.5, name='dropout2')(x)
+    print("input to softmax shape")
+    print(x.shape)
     predictions = Dense(3, activation='softmax')(x)
 
     # Create the final model and compile it
@@ -290,7 +297,6 @@ def create_model():
         steps_per_epoch = nb_train_steps,
         epochs = nb_epochs,
         validation_data = (val_data, val_labels),
-        validation_steps = nb_val_steps
         #callbacks = [checkpoint, early]
     )
 
