@@ -216,11 +216,11 @@ def create_model():
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-                include_top=False,
-                weights='imagenet',
-                input_shape=(299, 299, 3),
-                pooling='avg'
-                )
+        include_top=False,
+        weights='imagenet',
+        input_shape=(299, 299, 3),
+        pooling='avg'
+    )
     # Freeze layers
     for layer in model.layers:
         layer.trainable = False
@@ -237,17 +237,16 @@ def create_model():
     final_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
     train_dat = np.append(tr_data, tr_labels)
-    val_dat = np.append(val_data, val_labels)
 
     # Fit the model
     final_model.fit_generator(
-                train_dat,
-                steps_per_epoch = nb_train_steps,
-                epochs = nb_epochs,
-                validation_data = val_dat,
-                validation_steps = nb_val_steps
-                #callbacks = [checkpoint, early]
-                )
+        train_dat,
+        steps_per_epoch = nb_train_steps,
+        epochs = nb_epochs,
+        validation_data = (val_data, val_labels),
+        validation_steps = nb_val_steps
+        #callbacks = [checkpoint, early]
+    )
 
     return final_model
 
