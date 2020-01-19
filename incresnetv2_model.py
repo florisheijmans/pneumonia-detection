@@ -81,92 +81,140 @@ def get_image_data(data_dir):
     viral_cases = viral_dir.glob('*.jpeg')
 
     # Initialise lists to put all the images in, along with their labels: (img, label)
-    normal_data = []
-    bact_data = []
-    viral_data = []
+    dat = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
-        normal_data.append((img, 0))
+        dat.append((img, 0))
     for img in bacterial_cases:
-        bact_data.append((img, 1))
+        dat.append((img, 1))
     for img in viral_cases:
-        viral_data.append((img, 2))
+        dat.append((img, 2))
 
-
-    normal_data_list = normal_data
-    bact_data_list = bact_data
-    viral_data_list = viral_data
-
-    # # Convert to pandas data frame
-    # normal_data = pd.DataFrame(normal_data, columns=['image', 'label'], index=None)
-    # bact_data = pd.DataFrame(bact_data, columns=['image', 'label'], index=None)
-    # viral_data = pd.DataFrame(viral_data, columns=['image', 'label'], index=None)
-    # # Randomise the order
-    # normal_data_list = normal_data.sample(frac=1.).reset_index(drop=True)
-    # bact_data_list = bact_data.sample(frac=1.).reset_index(drop=True)
-    # viral_data_list = viral_data.sample(frac=1.).reset_index(drop=True)
-    # Check the data frame
-    # print("val data")
-    # print(f"normal:\n {normal_data_list.head()}")
-    # print(f"bacterial:\n {bact_data_list.head()}")
-    # print(f"viral:\n {viral_data_list.head()}")
     print("Got all image data from ", data_dir)
-    return normal_data_list, bact_data_list, viral_data_list
+    return dat
 
 # Get lists
 print("Getting all image lists.")
-tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list = get_image_data(train_data_dir)
-val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list  = get_image_data(val_data_dir)
-test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list  = get_image_data(test_data_dir)
+train_dat = get_image_data(train_data_dir)
+val_data  = get_image_data(val_data_dir)
+test_data  = get_image_data(test_data_dir)
+
+
+# Convert to pandas data frame
+train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
 print("Completed getting all image lists.")
 
-def decode_imgs_to_data(normal_cases, bact_cases, viral_cases):
+# Augmentation sequence 
+seq = iaa.OneOf([
+    iaa.Fliplr(), # horizontal flips
+    iaa.Affine(rotate=20), # roatation
+    iaa.Multiply((1.2, 1.5))]) #random brightness
 
-    # Initialise lists
-    all_data = []
-    all_labels = []
-    # normal_data = []
-    # normal_labels = []
-    # bact_data = []
-    # bact_labels = []
-    # viral_data = []
-    # viral_labels = []
+def data_gen(data, batch_size):
+    # Get total number of samples in the data
+    n = len(data)
+    steps = n//batch_size
+    
+    # Define two numpy arrays for containing batch data and labels
+    batch_data = np.zeros((batch_size, 299, 299, 3), dtype=np.float32)
+    batch_labels = np.zeros((batch_size,2), dtype=np.float32)
 
-    """ append all images to all_data and all_labels"""
-    cases = [normal_cases, bact_cases, viral_cases]
-    for case in range(3):
-        counter = 0
-        for img in cases[case]:
-            img = mimg.imread(str(img[0]))
+    # Get a numpy array of all the indices of the input data
+    indices = np.arange(n)
+    
+    # Initialize a counter
+    i =0
+    while True:
+        np.random.shuffle(indices)
+        # Get the next batch 
+        count = 0
+        next_batch = indices[(i*batch_size):(i+1)*batch_size]
+        for j, idx in enumerate(next_batch):
+            img_name = data.iloc[idx]['image']
+            label = data.iloc[idx]['label']
+            
+            # one hot encoding
+            encoded_label = to_categorical(label, num_classes=2)
+            # read the image and resize
+            img = cv2.imread(str(img_name))
             img = cv2.resize(img, (299,299))
-            if len(img) <= 2:
+            
+            # check if it's grayscale
+            if img.shape[2]==1:
                 img = np.dstack([img, img, img])
+            
+            # cv2 reads in BGR mode by default
+            orig_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # normalize the image pixels
+            orig_img = img.astype(np.float32)/255.
+            
+            batch_data[count] = orig_img
+            batch_labels[count] = encoded_label
+            
+            # generating more samples of the undersampled class
+            if label==0 and count < batch_size-2:
+                aug_img1 = seq.augment_image(img)
+                aug_img2 = seq.augment_image(img)
+                aug_img1 = cv2.cvtColor(aug_img1, cv2.COLOR_BGR2RGB)
+                aug_img2 = cv2.cvtColor(aug_img2, cv2.COLOR_BGR2RGB)
+                aug_img1 = aug_img1.astype(np.float32)/255.
+                aug_img2 = aug_img2.astype(np.float32)/255.
+
+                batch_data[count+1] = aug_img1
+                batch_labels[count+1] = encoded_label
+                batch_data[count+2] = aug_img2
+                batch_labels[count+2] = encoded_label
+                count +=2
+            
             else:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            img = img.astype(np.float32)/255.
-            label = to_categorical(case, num_classes=3)
-            all_data.append(img)
-            all_labels.append(label)
-            counter += 1
-            if (counter % 100 == 0):
-                print(counter, "from class", case)
+                count+=1
+            
+            if count==batch_size-1:
+                break
+            
+        i+=1
+        yield batch_data, batch_labels
+            
+        if i>=steps:
+            i=0
+
+
+def decode_imgs_to_data(cases):
+    # Initialise lists
+    dat = []
+    labels = []
+    # Append all images to dat and labels
+    for img in cases:
+        img = mimg.imread(str(img[0]))
+        img = cv2.resize(img, (299,299))
+        if len(img) <= 2:
+            img = np.dstack([img, img, img])
+        else:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img.astype(np.float32)/255.
+        label = to_categorical(case, num_classes=3)
+        dat.append(img)
+        labels.append(label)
+        counter += 1
+        if (counter % 100 == 0):
+            print(counter, "from class", case)
 
     # Convert the list into numpy arrays
-    all_data = np.array(all_data)
-    all_labels = np.array(all_labels)
-
-    # return (normal_data, normal_labels), (bact_data, bact_labels), (viral_data, viral_labels)
+    dat = np.array(dat)
+    labels = np.array(labels)
 
     print("Decoded all images to data")
-    return all_data, all_labels
+    return dat, labels
 
 print("Decoding all imgs to data.")
-tr_data, tr_labels = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
-val_data, val_labels = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
+# Get a train data generator
+train_data_gen = data_gen(data=train_data[:100], batch_size=batch_size)
+
+# Define the number of training steps
+nb_train_steps = train_data.shape[0]//batch_size
+
+val_data, val_labels = decode_imgs_to_data(val_data)
 print("Finished decoding all imgs to data.")
-#tr_norm, tr_bact, tr_viral = decode_imgs_to_data(tr_normal_imgs_list, tr_bact_imgs_list, tr_viral_imgs_list)
-#val_norm, val_bact, val_viral = decode_imgs_to_data(val_normal_imgs_list, val_bact_imgs_list, val_viral_imgs_list)
-#test_norm, test_bact, test_viral = decode_imgs_to_data(test_normal_imgs_list, test_bact_imgs_list, test_viral_imgs_list)
 
 # print(f"norm:\n {tr_norm[0][1]}")
 # print(f"bact:\n {tr_bact[0][1]}")
@@ -176,10 +224,10 @@ print("Finished decoding all imgs to data.")
 # print(f"bact len: {len(tr_bact[0])}")
 # print(f"viral len: {len(tr_viral[0])}")
 
-print(f"norm:\n {tr_data[0]}")
-print(f"labels:\n {tr_labels[0]}")
-print(f"norm len: {len(tr_data[0])}")
-print(f"labels len: {len(tr_labels[0])}")
+# print(f"norm:\n {tr_data[0]}")
+# print(f"labels:\n {tr_labels[0]}")
+# print(f"norm len: {len(tr_data[0])}")
+# print(f"labels len: {len(tr_labels[0])}")
 
 
 
@@ -236,11 +284,9 @@ def create_model():
     final_model = Model(inputs=model.input, outputs = predictions)
     final_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-    train_dat = np.append(tr_data, tr_labels)
-
     # Fit the model
     final_model.fit_generator(
-        train_dat,
+        train_data_gen,
         steps_per_epoch = nb_train_steps,
         epochs = nb_epochs,
         validation_data = (val_data, val_labels),
