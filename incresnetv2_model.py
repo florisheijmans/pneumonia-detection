@@ -192,12 +192,12 @@ def decode_imgs_to_data(cases):
         else:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img.astype(np.float32)/255.
-        label = to_categorical(case, num_classes=3)
+        label = to_categorical(str(img[1]), num_classes=3)
         dat.append(img)
         labels.append(label)
         counter += 1
         if (counter % 100 == 0):
-            print(counter, "from class", case)
+            print(counter, "from class", str(img[1]))
 
     # Convert the list into numpy arrays
     dat = np.array(dat)
