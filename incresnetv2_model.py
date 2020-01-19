@@ -55,8 +55,8 @@ aug.seed(111)
 total_train_imgs = 5098
 total_val_imgs = 519
 
-def get_hyperparameters():
-    pass
+cwd = os.getcwd()
+csv_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
 
 # Define hyperparameters
 img_width, img_height = 299, 299
@@ -95,9 +95,8 @@ def get_image_data(data_dir):
 # Get lists
 print("Getting all image lists.")
 train_dat = get_image_data(train_data_dir)
-val_data  = get_image_data(val_data_dir)
+val_data = get_image_data(val_data_dir)
 test_data  = get_image_data(test_data_dir)
-
 
 # Convert to pandas data frame
 train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
@@ -208,14 +207,48 @@ def decode_imgs_to_data(cases):
     print("Decoded all images to data")
     return dat, labels
 
+# temp1 = np.array([1,2,3,4,5])
+# temp2 = np.array(['a','b','c','d','e'])
+
+def create_csv(csv_path, pd_df, file_name):
+    os.chdir(csv_path)
+    # Check whether .csv-file exists, if so create new one as to not overwrite old one
+    csv_file_name_orig = file_name
+    csv_file_name = csv_file_name_orig
+    csv_exists = True
+    
+    counter = 1
+    while csv_exists:
+        csv_file = Path(os.path.join(csv_path, csv_file_name))
+        if not csv_file.is_file():
+            csv_exists = False
+            break
+        csv_file_name = csv_file_name_orig + str(counter)
+        counter += 1
+    
+    # Create .csv-file
+    res_path = os.path.join(csv_path, csv_file_name + '.csv')
+    pd_df.to_csv(res_path, index=False)
+    print(res_path)
+
+def write_to_csv(data, labels, file_name):
+    data_df = pd.DataFrame(data)
+    labels_df = pd.DataFrame(labels)
+    total_df = pd.concat([data_df.reset_index(drop=True), labels_df], axis=1)
+
+    create_csv(csv_dir, total_df, file_name)
+    
+
+
 print("Decoding all imgs to data.")
 # Get a train data generator
-train_data_gen = data_gen(data=train_data[:100], batch_size=batch_size)
+#train_data_gen = data_gen(data=train_data[:100], batch_size=batch_size)
 
 # Define the number of training steps
-nb_train_steps = train_data.shape[0]//batch_size
+#nb_train_steps = train_data.shape[0]//batch_size
 
 val_data, val_labels = decode_imgs_to_data(val_data)
+write_to_csv(val_data, val_labels, 'validation_set')
 print("Finished decoding all imgs to data.")
 
 # print(f"norm:\n {tr_norm[0][1]}")
@@ -230,8 +263,6 @@ print("Finished decoding all imgs to data.")
 # print(f"labels:\n {tr_labels[0]}")
 # print(f"norm len: {len(tr_data[0])}")
 # print(f"labels len: {len(tr_labels[0])}")
-
-
 
 def get_image_generators():
     # Decompose images
