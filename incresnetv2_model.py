@@ -1,4 +1,3 @@
-
 import os
 import glob
 import h5py
@@ -117,7 +116,7 @@ def data_gen(data, batch_size):
     
     # Define two numpy arrays for containing batch data and labels
     batch_data = np.zeros((batch_size, 299, 299, 3), dtype=np.float32)
-    batch_labels = np.zeros((batch_size,2), dtype=np.float32)
+    batch_labels = np.zeros((batch_size, 3), dtype=np.float32)
 
     # Get a numpy array of all the indices of the input data
     indices = np.arange(n)
