@@ -195,7 +195,7 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
-        
+
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -280,7 +280,7 @@ def load_numpy_binary(file_path):
                 test_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
             else:
                 print("Test data file doesn't mention data type")
-        
+
     # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
     print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
@@ -356,5 +356,5 @@ def create_model():
 
 get_image_data()
 res_model = create_model()
-res_model.save('incresnetv2_model.h5')
-#res_model.summary()
+res_model.save('incresnetv2_model_.h5')
+res_model.summary()
