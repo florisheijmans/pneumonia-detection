@@ -132,7 +132,7 @@ def data_gen(data, batch_size):
             label = data.iloc[idx]['label']
             
             # one hot encoding
-            encoded_label = to_categorical(label, num_classes=2)
+            encoded_label = to_categorical(label, num_classes=3)
             # read the image and resize
             img = cv2.imread(str(img_name))
             img = cv2.resize(img, (299,299))
@@ -242,13 +242,13 @@ def write_to_csv(data, labels, file_name):
 
 print("Decoding all imgs to data.")
 # Get a train data generator
-#train_data_gen = data_gen(data=train_data[:100], batch_size=batch_size)
+train_data_gen = data_gen(data=train_data, batch_size=batch_size)
 
 # Define the number of training steps
-#nb_train_steps = train_data.shape[0]//batch_size
+nb_train_steps = train_data.shape[0]//batch_size
 
 val_data, val_labels = decode_imgs_to_data(val_data)
-write_to_csv(val_data, val_labels, 'validation_set')
+# write_to_csv(val_data, val_labels, 'validation_set')
 print("Finished decoding all imgs to data.")
 
 # print(f"norm:\n {tr_norm[0][1]}")
@@ -297,7 +297,7 @@ def create_model():
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-        include_top=True,
+        include_top=True, #Default:(299,299,3)
         weights='imagenet',
         pooling='avg'
     )
