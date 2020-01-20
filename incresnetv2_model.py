@@ -56,7 +56,7 @@ total_train_imgs = 5098
 total_val_imgs = 519
 
 cwd = os.getcwd()
-csv_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
+bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
 
 # Define hyperparameters
 img_width, img_height = 299, 299
@@ -69,7 +69,45 @@ nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
 
 
-def get_image_data(data_dir):
+def get_image_data():
+    global test_data; global test_labels
+    global val_data; global val_labels
+    global test_data; global test_labels
+
+    # Get lists
+    # try:
+    #     val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
+    #     print("Loaded validation and test data")
+    # except:
+    #     print("Getting all image lists")
+    #     val_dat = create_image_data(val_data_dir)
+    #     test_dat  = create_image_data(test_data_dir)
+
+    #     val_data, val_labels = decode_imgs_to_data(val_dat)
+    #     test_data, test_labels = decode_imgs_to_data(test_dat)
+
+    #     create_all_binary_files()print("Getting all image lists")
+    val_dat = create_image_data(val_data_dir)
+    test_dat  = create_image_data(test_data_dir)
+
+    val_data, val_labels = decode_imgs_to_data(val_dat)
+    test_data, test_labels = decode_imgs_to_data(test_dat)
+
+    create_all_binary_files()
+
+    # Read training data
+    train_dat = create_image_data(train_data_dir)
+    # Convert to pandas data frame
+    train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
+
+    # Get a train data generator
+    global train_data_gen
+    train_data_gen = data_gen(data=train_data, batch_size=batch_size)
+
+    # Define the number of training steps
+    nb_train_steps = train_data.shape[0]//batch_size
+
+def create_image_data(data_dir):
     # Dirs
     norm_dir = data_dir / 'NORMAL'
     bact_dir = data_dir / 'BACTERIA'
@@ -89,20 +127,20 @@ def get_image_data(data_dir):
     for img in viral_cases:
         dat.append((img, 2))
 
-    print("Got all image data from ", data_dir)
+    print("Got all image data from", data_dir)
     return dat
 
 # Get lists
-print("Getting all image lists.")
-train_dat = get_image_data(train_data_dir)
-val_data = get_image_data(val_data_dir)
-test_data  = get_image_data(test_data_dir)
+# print("Getting all image lists.")
+# train_dat = get_image_data(train_data_dir)
+# val_data = get_image_data(val_data_dir)
+# test_data  = get_image_data(test_data_dir)
 
-# Convert to pandas data frame
-train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
-print("Completed getting all image lists.")
+# # Convert to pandas data frame
+# train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
+# print("Completed getting all image lists.")
 
-# Augmentation sequence 
+# Augmentation sequence
 seq = iaa.OneOf([
     iaa.Fliplr(), # horizontal flips
     iaa.Affine(rotate=20), # roatation
@@ -112,47 +150,47 @@ def data_gen(data, batch_size):
     # Get total number of samples in the data
     n = len(data)
     steps = n//batch_size
-    
+
     # Define two numpy arrays for containing batch data and labels
     batch_data = np.zeros((batch_size, 299, 299, 3), dtype=np.float32)
     batch_labels = np.zeros((batch_size, 3), dtype=np.float32)
 
     # Get a numpy array of all the indices of the input data
     indices = np.arange(n)
-    
+
     # Initialize a counter
     i =0
     while True:
         np.random.shuffle(indices)
-        # Get the next batch 
+        # Get the next batch
         count = 0
         next_batch = indices[(i*batch_size):(i+1)*batch_size]
         for j, idx in enumerate(next_batch):
             img_name = data.iloc[idx]['image']
             label = data.iloc[idx]['label']
-            
+
             # one hot encoding
             encoded_label = to_categorical(label, num_classes=3)
             # read the image and resize
-            img = cv2.imread(str(img_name))
-            img = cv2.resize(img, (299,299))
-            
-            # check if it's grayscale
-            if img.shape[2]==1:
-                img = np.dstack([img, img, img])
-            
+            img_dat = mimg.imread(str(img[0]))
+            img_dat = cv2.resize(img_dat, (299,299))
+            if len(img_dat) <= 2:
+                img_dat = np.dstack([img_dat, img_dat, img_dat])
+            else:
+                img_dat = cv2.cvtColor(img_dat, cv2.COLOR_BGR2RGB)
+
             # cv2 reads in BGR mode by default
-            orig_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            orig_img = cv2.cvtColor(img_dat, cv2.COLOR_BGR2RGB)
             # normalize the image pixels
-            orig_img = img.astype(np.float32)/255.
-            
+            orig_img = img_dat.astype(np.float32)/255.
+
             batch_data[count] = orig_img
             batch_labels[count] = encoded_label
-            
+
             # generating more samples of the undersampled class
             if label==0 and count < batch_size-2:
-                aug_img1 = seq.augment_image(img)
-                aug_img2 = seq.augment_image(img)
+                aug_img1 = seq.augment_image(img_dat)
+                aug_img2 = seq.augment_image(img_dat)
                 aug_img1 = cv2.cvtColor(aug_img1, cv2.COLOR_BGR2RGB)
                 aug_img2 = cv2.cvtColor(aug_img2, cv2.COLOR_BGR2RGB)
                 aug_img1 = aug_img1.astype(np.float32)/255.
@@ -163,18 +201,17 @@ def data_gen(data, batch_size):
                 batch_data[count+2] = aug_img2
                 batch_labels[count+2] = encoded_label
                 count +=2
-            
+
             else:
                 count+=1
-            
+
             if count==batch_size-1:
                 break
-            
+
         i+=1
-        print(batch_data)
-        print(batch_labels)
+
         yield batch_data, batch_labels
-            
+
         if i>=steps:
             i=0
 
@@ -207,49 +244,81 @@ def decode_imgs_to_data(cases):
     print("Decoded all images to data")
     return dat, labels
 
-# temp1 = np.array([1,2,3,4,5])
-# temp2 = np.array(['a','b','c','d','e'])
 
-def create_csv(csv_path, pd_df, file_name):
-    os.chdir(csv_path)
+def create_numpy_binary(np_arr, file_path, file_name):
+    os.chdir(file_path)
+
     # Check whether .csv-file exists, if so create new one as to not overwrite old one
-    csv_file_name_orig = file_name
-    csv_file_name = csv_file_name_orig
-    csv_exists = True
-    
+    bin_file_name_orig = file_name
+    bin_file_name = bin_file_name_orig
+    bin_exists = True
+
     counter = 1
-    while csv_exists:
-        csv_file = Path(os.path.join(csv_path, csv_file_name))
-        if not csv_file.is_file():
-            csv_exists = False
+    while bin_exists:
+        bin_file = Path(os.path.join(file_path, bin_file_name))
+        if not bin_file.is_file():
+            bin_exists = False
             break
-        csv_file_name = csv_file_name_orig + str(counter)
+        bin_file_name = bin_file_name_orig + str(counter)
         counter += 1
-    
+
     # Create .csv-file
-    res_path = os.path.join(csv_path, csv_file_name + '.csv')
-    pd_df.to_csv(res_path, index=False)
+    res_path = os.path.join(file_path, bin_file_name)
+    np.save(res_path, np_arr, allow_pickle=True, fix_imports=False)
     print(res_path)
 
-def write_to_csv(data, labels, file_name):
-    data_df = pd.DataFrame(data)
-    labels_df = pd.DataFrame(labels)
-    total_df = pd.concat([data_df.reset_index(drop=True), labels_df], axis=1)
+def create_all_binary_files():
+    # create_numpy_binary(train_data, bin_file_dir, 'TRAIN_DATA_set')
+    # create_numpy_binary(train_labels, bin_file_dir, 'TRAIN_LABELS_set')
+    create_numpy_binary(val_data, bin_file_dir, 'VALIDATION_DATA_set')
+    create_numpy_binary(val_labels, bin_file_dir, 'VALIDATION_LABELS_set')
+    create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
+    create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
 
-    create_csv(csv_dir, total_df, file_name)
-    
+
+def load_numpy_binary(file_path):
+    os.chdir(file_path)
+    file_path = Path(file_path)
+
+    # Get the list of all the images
+    for npy_file in file_path.rglob('*.npy'):
+        str_npy_file = str(npy_file)
+        if 'TRAIN' in str_npy_file:
+            if 'DATA' in str_npy_file:
+                train_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            elif 'LABELS' in str_npy_file:
+                train_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            else:
+                print("Train data file doesn't mention data type")
+        elif 'VALIDATION' in str_npy_file:
+            if 'DATA' in str_npy_file:
+                val_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            elif 'LABELS' in str_npy_file:
+                val_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            else:
+                print("Validation data file doesn't mention data type")
+        elif 'TEST' in str_npy_file:
+            if 'DATA' in str_npy_file:
+                test_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            elif 'LABELS' in str_npy_file:
+                test_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
+            else:
+                print("Test data file doesn't mention data type")
+
+    # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
+    return val_dat, val_labels, test_dat, test_labels
 
 
-print("Decoding all imgs to data.")
-# Get a train data generator
-train_data_gen = data_gen(data=train_data, batch_size=batch_size)
+# print("Decoding all imgs to data.")
+# # Get a train data generator
+# train_data_gen = data_gen(data=train_data, batch_size=batch_size)
 
-# Define the number of training steps
-nb_train_steps = train_data.shape[0]//batch_size
+# # Define the number of training steps
+# nb_train_steps = train_data.shape[0]//batch_size
 
-val_data, val_labels = decode_imgs_to_data(val_data)
-# write_to_csv(val_data, val_labels, 'validation_set')
-print("Finished decoding all imgs to data.")
+# val_data, val_labels = decode_imgs_to_data(val_data)
+# # write_to_csv(val_data, val_labels, 'validation_set')
+# print("Finished decoding all imgs to data.")
 
 # print(f"norm:\n {tr_norm[0][1]}")
 # print(f"bact:\n {tr_bact[0][1]}")
@@ -320,15 +389,15 @@ def create_model():
 
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
-    
+
     # Compile model with optimization setting
     opt = Adam(lr=0.0001, decay=1e-5)
     final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
-    chkpt = ModelCheckpoint(filepath='best_model_todate', save_best_only=True, save_weights_only=True)
-    
+    chkpt = ModelCheckpoint(filepath='weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5', save_best_only=False, save_weights_only=True)
+
     # Fit the model
     final_model.fit_generator(
         train_data_gen,
@@ -340,6 +409,7 @@ def create_model():
 
     return final_model
 
+get_image_data()
 res_model = create_model()
-res_model.save('incresnetv2_model.h5')
-#res_model.summary()
+res_model.save('incresnetv2_model_.h5')
+res_model.summary()
