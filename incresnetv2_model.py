@@ -320,18 +320,26 @@ def create_model():
 
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
-    final_model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+    
+    # Compile model with optimization setting
+    opt = Adam(lr=0.0001, decay=1e-5)
+    final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
 
+    # More optimization of model training
+    es = EarlyStopping(patience=5)
+    chkpt = ModelCheckpoint(filepath='best_model_todate', save_best_only=True, save_weights_only=True)
+    
     # Fit the model
     final_model.fit_generator(
         train_data_gen,
         steps_per_epoch = nb_train_steps,
         epochs = nb_epochs,
         validation_data = (val_data, val_labels),
-        #callbacks = [checkpoint, early]
+        callbacks=[es, chkpt]
     )
 
     return final_model
 
 res_model = create_model()
+res_model.save('incresnetv2_model.h5')
 #res_model.summary()
