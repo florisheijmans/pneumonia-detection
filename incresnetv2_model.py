@@ -248,6 +248,7 @@ train_data_gen = data_gen(data=train_data, batch_size=batch_size)
 nb_train_steps = train_data.shape[0]//batch_size
 
 val_data, val_labels = decode_imgs_to_data(val_data)
+test_data, test_labels = decode_imgs_to_data(test_data)
 # write_to_csv(val_data, val_labels, 'validation_set')
 print("Finished decoding all imgs to data.")
 
@@ -299,7 +300,7 @@ def create_model():
     model = applications.inception_resnet_v2.InceptionResNetV2(
         include_top=True, #Default:(299,299,3)
         weights='imagenet',
-        pooling='avg'
+        pooling='max'
     )
     # Freeze layers
     for layer in model.layers:
@@ -307,27 +308,21 @@ def create_model():
 
     # Add trainable layers to the model
     x = model.output
-    print("model shape")
-    print(x.shape)
-    #x = Flatten()(x)
-    x = Dense(1024, activation='relu')(x)
-    x = Dropout(0.7, name='dropout1')(x)
-    x = Dense(512, activation='relu')(x)
-    x = Dropout(0.5, name='dropout2')(x)
-    print("input to softmax shape")
-    print(x.shape)
+
+    model.summary()
+
     predictions = Dense(3, activation='softmax')(x)
 
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
     
     # Compile model with optimization setting
-    opt = Adam(lr=0.0001, decay=1e-5)
+    opt = Adam(lr=0.001, decay=1e-5)
     final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
-    chkpt = ModelCheckpoint(filepath='best_model_todate', save_best_only=True, save_weights_only=True)
+    chkpt = ModelCheckpoint(filepath='best_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
     # Fit the model
     final_model.fit_generator(
@@ -341,5 +336,26 @@ def create_model():
     return final_model
 
 res_model = create_model()
-res_model.save('incresnetv2_model.h5')
+res_model.save('incresnetv2_model_with_flatten.h5')
 #res_model.summary()
+
+test_model = tf.keras.models.load_model('incresnetv2_model.h5')
+loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
+print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# Get predictions
+preds = test_model.predict(test_data, batch_size=16)
+preds = np.argmax(preds, axis=-1)
+
+# Original labels
+orig_test_labels = np.argmax(test_labels, axis=-1)
+
+print(orig_test_labels.shape)
+print(preds.shape)
+
+cm  = confusion_matrix(orig_test_labels, preds)
+plt.figure()
+plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.show()
