@@ -195,12 +195,8 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
-<<<<<<< HEAD
-
-=======
         # print(batch_data)
         # print(batch_labels)
->>>>>>> floris-stuff-works-still
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -237,14 +233,14 @@ def decode_imgs_to_data(cases):
 
 def create_numpy_binary(np_arr, file_path, file_name):
     print(f"Creating binary file for: {file_name}")
-    #os.chdir(file_path)    
+    #os.chdir(file_path)
 
     bin_file_name = file_name
 
     # Create .npy-file
     res_path = os.path.join(file_path, bin_file_name)
     np.save(res_path, np_arr)
-    print(res_path)   
+    print(res_path)
 
 def create_all_binary_files():
     # create_numpy_binary(train_data, bin_file_dir, 'TRAIN_DATA_set')
@@ -254,13 +250,10 @@ def create_all_binary_files():
     create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
     create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
 
-<<<<<<< HEAD
-=======
 val_data, val_labels = decode_imgs_to_data(val_data)
 test_data, test_labels = decode_imgs_to_data(test_data)
 # write_to_csv(val_data, val_labels, 'validation_set')
 print("Finished decoding all imgs to data.")
->>>>>>> floris-stuff-works-still
 
 def load_numpy_binary(file_path):
     os.chdir(file_path)
@@ -347,13 +340,8 @@ def create_model():
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
-<<<<<<< HEAD
-    chkpt = ModelCheckpoint(filepath='weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5', save_best_only=False, save_weights_only=True)
-
-=======
     chkpt = ModelCheckpoint(filepath='best_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
-    
->>>>>>> floris-stuff-works-still
+
     # Fit the model
     final_model.fit_generator(
         train_data_gen,
@@ -367,10 +355,6 @@ def create_model():
 
 get_image_data()
 res_model = create_model()
-<<<<<<< HEAD
-res_model.save('incresnetv2_model_.h5')
-res_model.summary()
-=======
 res_model.save('incresnetv2_model_with_flatten.h5')
 #res_model.summary()
 
@@ -394,4 +378,3 @@ plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
 plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
 plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
 plt.show()
->>>>>>> floris-stuff-works-still
