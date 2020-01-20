@@ -75,25 +75,19 @@ def get_image_data():
     global test_data; global test_labels
 
     # Get lists
-    # try:
-    #     val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
-    #     print("Loaded validation and test data")
-    # except:
-    #     print("Getting all image lists")
-    #     val_dat = create_image_data(val_data_dir)
-    #     test_dat  = create_image_data(test_data_dir)
+    try:
+        val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
+        print(f"val_data:\n{val_data.shape[0]}")
+        print("Try: Loaded validation and test data")
+    except:
+        print("Except: Getting all image lists")
+        val_dat = create_image_data(val_data_dir)
+        test_dat  = create_image_data(test_data_dir)
 
-    #     val_data, val_labels = decode_imgs_to_data(val_dat)
-    #     test_data, test_labels = decode_imgs_to_data(test_dat)
+        val_data, val_labels = decode_imgs_to_data(val_dat)
+        test_data, test_labels = decode_imgs_to_data(test_dat)
 
-    #     create_all_binary_files()print("Getting all image lists")
-    val_dat = create_image_data(val_data_dir)
-    test_dat  = create_image_data(test_data_dir)
-
-    val_data, val_labels = decode_imgs_to_data(val_dat)
-    test_data, test_labels = decode_imgs_to_data(test_dat)
-
-    create_all_binary_files()
+        create_all_binary_files()
 
     # Read training data
     train_dat = create_image_data(train_data_dir)
@@ -121,6 +115,8 @@ def create_image_data(data_dir):
     dat = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
+        if data_dir == val_data_dir:
+            print("append normal in VAL data")
         dat.append((img, 0))
     for img in bacterial_cases:
         dat.append((img, 1))
@@ -129,16 +125,6 @@ def create_image_data(data_dir):
 
     print("Got all image data from", data_dir)
     return dat
-
-# Get lists
-# print("Getting all image lists.")
-# train_dat = get_image_data(train_data_dir)
-# val_data = get_image_data(val_data_dir)
-# test_data  = get_image_data(test_data_dir)
-
-# # Convert to pandas data frame
-# train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
-# print("Completed getting all image lists.")
 
 # Augmentation sequence
 seq = iaa.OneOf([
@@ -159,7 +145,7 @@ def data_gen(data, batch_size):
     indices = np.arange(n)
 
     # Initialize a counter
-    i =0
+    i = 0
     while True:
         np.random.shuffle(indices)
         # Get the next batch
@@ -172,7 +158,7 @@ def data_gen(data, batch_size):
             # one hot encoding
             encoded_label = to_categorical(label, num_classes=3)
             # read the image and resize
-            img_dat = mimg.imread(str(img[0]))
+            img_dat = mimg.imread(str(img_name))
             img_dat = cv2.resize(img_dat, (299,299))
             if len(img_dat) <= 2:
                 img_dat = np.dstack([img_dat, img_dat, img_dat])
@@ -241,30 +227,18 @@ def decode_imgs_to_data(cases):
     dat = np.array(dat)
     labels = np.array(labels)
 
-    print("Decoded all images to data")
     return dat, labels
 
 
 def create_numpy_binary(np_arr, file_path, file_name):
-    os.chdir(file_path)    
+    print(f"Creating binary file for: {file_name}")
+    #os.chdir(file_path)    
 
-    # Check whether .csv-file exists, if so create new one as to not overwrite old one
-    bin_file_name_orig = file_name
-    bin_file_name = bin_file_name_orig
-    bin_exists = True
-    
-    counter = 1
-    while bin_exists:
-        bin_file = Path(os.path.join(file_path, bin_file_name))
-        if not bin_file.is_file():
-            bin_exists = False
-            break
-        bin_file_name = bin_file_name_orig + str(counter)
-        counter += 1
-    
-    # Create .csv-file
+    bin_file_name = file_name
+
+    # Create .npy-file
     res_path = os.path.join(file_path, bin_file_name)
-    np.save(res_path, np_arr, allow_pickle=True, fix_imports=False)
+    np.save(res_path, np_arr)
     print(res_path)   
 
 def create_all_binary_files():
@@ -291,7 +265,9 @@ def load_numpy_binary(file_path):
             else:
                 print("Train data file doesn't mention data type")
         elif 'VALIDATION' in str_npy_file:
+            print("in VALIDATION if")
             if 'DATA' in str_npy_file:
+                print("in DATA if")
                 val_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
             elif 'LABELS' in str_npy_file:
                 val_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
@@ -306,32 +282,8 @@ def load_numpy_binary(file_path):
                 print("Test data file doesn't mention data type")
         
     # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
+    print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
-
-
-# print("Decoding all imgs to data.")
-# # Get a train data generator
-# train_data_gen = data_gen(data=train_data, batch_size=batch_size)
-
-# # Define the number of training steps
-# nb_train_steps = train_data.shape[0]//batch_size
-
-# val_data, val_labels = decode_imgs_to_data(val_data)
-# # write_to_csv(val_data, val_labels, 'validation_set')
-# print("Finished decoding all imgs to data.")
-
-# print(f"norm:\n {tr_norm[0][1]}")
-# print(f"bact:\n {tr_bact[0][1]}")
-# print(f"viral:\n {tr_viral[0][1]}")
-
-# print(f"norm len: {len(tr_norm[0])}")
-# print(f"bact len: {len(tr_bact[0])}")
-# print(f"viral len: {len(tr_viral[0])}")
-
-# print(f"norm:\n {tr_data[0]}")
-# print(f"labels:\n {tr_labels[0]}")
-# print(f"norm len: {len(tr_data[0])}")
-# print(f"labels len: {len(tr_labels[0])}")
 
 def get_image_generators():
     # Decompose images
@@ -354,13 +306,6 @@ def get_image_generators():
             batch_size=batch_size)
 
     return train_gen, validation_gen, test_gen
-
-#train_generator, validation_generator, test_generator = get_image_generators()
-
-def get_image_files(image_dir):
-  fs = glob("{}/*.jpeg".format(image_dir))
-  fs = [os.path.basename(filename) for filename in fs]
-  return sorted(fs)
 
 def create_model():
     print("Start creating model")
