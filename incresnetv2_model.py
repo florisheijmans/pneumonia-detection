@@ -195,8 +195,7 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
-        # print(batch_data)
-        # print(batch_labels)
+        
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -233,7 +232,6 @@ def decode_imgs_to_data(cases):
 
 def create_numpy_binary(np_arr, file_path, file_name):
     print(f"Creating binary file for: {file_name}")
-    #os.chdir(file_path)
 
     bin_file_name = file_name
 
@@ -250,10 +248,10 @@ def create_all_binary_files():
     create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
     create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
 
-val_data, val_labels = decode_imgs_to_data(val_data)
-test_data, test_labels = decode_imgs_to_data(test_data)
-# write_to_csv(val_data, val_labels, 'validation_set')
-print("Finished decoding all imgs to data.")
+# val_data, val_labels = decode_imgs_to_data(val_data)
+# test_data, test_labels = decode_imgs_to_data(test_data)
+# # write_to_csv(val_data, val_labels, 'validation_set')
+# print("Finished decoding all imgs to data.")
 
 def load_numpy_binary(file_path):
     os.chdir(file_path)
@@ -270,9 +268,7 @@ def load_numpy_binary(file_path):
             else:
                 print("Train data file doesn't mention data type")
         elif 'VALIDATION' in str_npy_file:
-            print("in VALIDATION if")
             if 'DATA' in str_npy_file:
-                print("in DATA if")
                 val_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
             elif 'LABELS' in str_npy_file:
                 val_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
