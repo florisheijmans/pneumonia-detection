@@ -130,3 +130,6 @@ dmypy.json
 
 chest_xray
 images
+
+*.hdf5
+*.h5

@@ -102,7 +102,7 @@ test_data  = get_image_data(test_data_dir)
 train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
 print("Completed getting all image lists.")
 
-# Augmentation sequence 
+# Augmentation sequence
 seq = iaa.OneOf([
     iaa.Fliplr(), # horizontal flips
     iaa.Affine(rotate=20), # roatation
@@ -112,43 +112,43 @@ def data_gen(data, batch_size):
     # Get total number of samples in the data
     n = len(data)
     steps = n//batch_size
-    
+
     # Define two numpy arrays for containing batch data and labels
     batch_data = np.zeros((batch_size, 299, 299, 3), dtype=np.float32)
     batch_labels = np.zeros((batch_size, 3), dtype=np.float32)
 
     # Get a numpy array of all the indices of the input data
     indices = np.arange(n)
-    
+
     # Initialize a counter
     i =0
     while True:
         np.random.shuffle(indices)
-        # Get the next batch 
+        # Get the next batch
         count = 0
         next_batch = indices[(i*batch_size):(i+1)*batch_size]
         for j, idx in enumerate(next_batch):
             img_name = data.iloc[idx]['image']
             label = data.iloc[idx]['label']
-            
+
             # one hot encoding
             encoded_label = to_categorical(label, num_classes=3)
             # read the image and resize
             img = cv2.imread(str(img_name))
             img = cv2.resize(img, (299,299))
-            
+
             # check if it's grayscale
             if img.shape[2]==1:
                 img = np.dstack([img, img, img])
-            
+
             # cv2 reads in BGR mode by default
             orig_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             # normalize the image pixels
             orig_img = img.astype(np.float32)/255.
-            
+
             batch_data[count] = orig_img
             batch_labels[count] = encoded_label
-            
+
             # generating more samples of the undersampled class
             if label==0 and count < batch_size-2:
                 aug_img1 = seq.augment_image(img)
@@ -163,18 +163,18 @@ def data_gen(data, batch_size):
                 batch_data[count+2] = aug_img2
                 batch_labels[count+2] = encoded_label
                 count +=2
-            
+
             else:
                 count+=1
-            
+
             if count==batch_size-1:
                 break
-            
+
         i+=1
-        print(batch_data)
-        print(batch_labels)
+        #print(batch_data)
+        #print(batch_labels)
         yield batch_data, batch_labels
-            
+
         if i>=steps:
             i=0
 
@@ -216,7 +216,7 @@ def create_csv(csv_path, pd_df, file_name):
     csv_file_name_orig = file_name
     csv_file_name = csv_file_name_orig
     csv_exists = True
-    
+
     counter = 1
     while csv_exists:
         csv_file = Path(os.path.join(csv_path, csv_file_name))
@@ -225,7 +225,7 @@ def create_csv(csv_path, pd_df, file_name):
             break
         csv_file_name = csv_file_name_orig + str(counter)
         counter += 1
-    
+
     # Create .csv-file
     res_path = os.path.join(csv_path, csv_file_name + '.csv')
     pd_df.to_csv(res_path, index=False)
@@ -237,7 +237,7 @@ def write_to_csv(data, labels, file_name):
     total_df = pd.concat([data_df.reset_index(drop=True), labels_df], axis=1)
 
     create_csv(csv_dir, total_df, file_name)
-    
+
 
 
 print("Decoding all imgs to data.")
@@ -320,15 +320,15 @@ def create_model():
 
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
-    
+
     # Compile model with optimization setting
     opt = Adam(lr=0.0001, decay=1e-5)
     final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
-    chkpt = ModelCheckpoint(filepath='best_model_todate', save_best_only=True, save_weights_only=True)
-    
+    chkpt = ModelCheckpoint(filepath='weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5', save_best_only=False, save_weights_only=True)
+
     # Fit the model
     final_model.fit_generator(
         train_data_gen,
