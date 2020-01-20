@@ -367,6 +367,7 @@ def create_model():
 
     return final_model
 
+get_image_data()
 res_model = create_model()
 res_model.save('incresnetv2_model.h5')
 #res_model.summary()
