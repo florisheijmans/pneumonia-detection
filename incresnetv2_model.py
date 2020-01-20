@@ -56,7 +56,7 @@ total_train_imgs = 5098
 total_val_imgs = 519
 
 cwd = os.getcwd()
-bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
+csv_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
 
 # Define hyperparameters
 img_width, img_height = 299, 299
@@ -69,39 +69,7 @@ nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
 
 
-
-def get_image_data():
-    global test_data; global test_labels
-    global val_data; global val_labels
-    global test_data; global test_labels
-
-    # Get lists
-    try:
-        val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
-        print("Loaded validation and test data")
-    except:
-        print("Getting all image lists")
-        val_dat = create_image_data(val_data_dir)
-        test_dat  = create_image_data(test_data_dir)
-
-        val_data, val_labels = decode_imgs_to_data(val_dat)
-        test_data, test_labels = decode_imgs_to_data(test_dat)
-
-        create_all_binary_files()
-
-    # Read training data
-    train_dat = create_image_data(train_data_dir)
-    # Convert to pandas data frame
-    train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
-
-    # Get a train data generator
-    global train_data_gen
-    train_data_gen = data_gen(data=train_data, batch_size=batch_size)
-
-    # Define the number of training steps
-    nb_train_steps = train_data.shape[0]//batch_size
-
-def create_image_data(data_dir):
+def get_image_data(data_dir):
     # Dirs
     norm_dir = data_dir / 'NORMAL'
     bact_dir = data_dir / 'BACTERIA'
@@ -121,8 +89,18 @@ def create_image_data(data_dir):
     for img in viral_cases:
         dat.append((img, 2))
 
-    print("Got all image data from", data_dir)
+    print("Got all image data from ", data_dir)
     return dat
+
+# Get lists
+print("Getting all image lists.")
+train_dat = get_image_data(train_data_dir)
+val_data = get_image_data(val_data_dir)
+test_data  = get_image_data(test_data_dir)
+
+# Convert to pandas data frame
+train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
+print("Completed getting all image lists.")
 
 # Augmentation sequence 
 seq = iaa.OneOf([
@@ -229,68 +207,62 @@ def decode_imgs_to_data(cases):
     print("Decoded all images to data")
     return dat, labels
 
-def create_numpy_binary(np_arr, file_path, file_name):
-    os.chdir(file_path)    
+# temp1 = np.array([1,2,3,4,5])
+# temp2 = np.array(['a','b','c','d','e'])
 
+def create_csv(csv_path, pd_df, file_name):
+    os.chdir(csv_path)
     # Check whether .csv-file exists, if so create new one as to not overwrite old one
-    bin_file_name_orig = file_name
-    bin_file_name = bin_file_name_orig
-    bin_exists = True
+    csv_file_name_orig = file_name
+    csv_file_name = csv_file_name_orig
+    csv_exists = True
     
     counter = 1
-    while bin_exists:
-        bin_file = Path(os.path.join(file_path, bin_file_name))
-        if not bin_file.is_file():
-            bin_exists = False
+    while csv_exists:
+        csv_file = Path(os.path.join(csv_path, csv_file_name))
+        if not csv_file.is_file():
+            csv_exists = False
             break
-        bin_file_name = bin_file_name_orig + str(counter)
+        csv_file_name = csv_file_name_orig + str(counter)
         counter += 1
     
     # Create .csv-file
-    res_path = os.path.join(file_path, bin_file_name)
-    np.save(res_path, np_arr, allow_pickle=True, fix_imports=False)
-    print(res_path)   
+    res_path = os.path.join(csv_path, csv_file_name + '.csv')
+    pd_df.to_csv(res_path, index=False)
+    print(res_path)
 
-def create_all_binary_files():
-    # create_numpy_binary(train_data, bin_file_dir, 'TRAIN_DATA_set')
-    # create_numpy_binary(train_labels, bin_file_dir, 'TRAIN_LABELS_set')
-    create_numpy_binary(val_data, bin_file_dir, 'VALIDATION_DATA_set')
-    create_numpy_binary(val_labels, bin_file_dir, 'VALIDATION_LABELS_set')
-    create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
-    create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
+def write_to_csv(data, labels, file_name):
+    data_df = pd.DataFrame(data)
+    labels_df = pd.DataFrame(labels)
+    total_df = pd.concat([data_df.reset_index(drop=True), labels_df], axis=1)
+
+    create_csv(csv_dir, total_df, file_name)
+    
 
 
-def load_numpy_binary(file_path):
-    os.chdir(file_path)
-    file_path = Path(file_path)
+print("Decoding all imgs to data.")
+# Get a train data generator
+train_data_gen = data_gen(data=train_data, batch_size=batch_size)
 
-    # Get the list of all the images
-    for npy_file in file_path.rglob('*.npy'):
-        str_npy_file = str(npy_file)
-        if 'TRAIN' in str_npy_file:
-            if 'DATA' in str_npy_file:
-                train_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            elif 'LABELS' in str_npy_file:
-                train_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            else:
-                print("Train data file doesn't mention data type")
-        elif 'VALIDATION' in str_npy_file:
-            if 'DATA' in str_npy_file:
-                val_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            elif 'LABELS' in str_npy_file:
-                val_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            else:
-                print("Validation data file doesn't mention data type")
-        elif 'TEST' in str_npy_file:
-            if 'DATA' in str_npy_file:
-                test_dat = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            elif 'LABELS' in str_npy_file:
-                test_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
-            else:
-                print("Test data file doesn't mention data type")
-        
-    # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
-    return val_dat, val_labels, test_dat, test_labels
+# Define the number of training steps
+nb_train_steps = train_data.shape[0]//batch_size
+
+val_data, val_labels = decode_imgs_to_data(val_data)
+# write_to_csv(val_data, val_labels, 'validation_set')
+print("Finished decoding all imgs to data.")
+
+# print(f"norm:\n {tr_norm[0][1]}")
+# print(f"bact:\n {tr_bact[0][1]}")
+# print(f"viral:\n {tr_viral[0][1]}")
+
+# print(f"norm len: {len(tr_norm[0])}")
+# print(f"bact len: {len(tr_bact[0])}")
+# print(f"viral len: {len(tr_viral[0])}")
+
+# print(f"norm:\n {tr_data[0]}")
+# print(f"labels:\n {tr_labels[0]}")
+# print(f"norm len: {len(tr_data[0])}")
+# print(f"labels len: {len(tr_labels[0])}")
 
 def get_image_generators():
     # Decompose images
@@ -314,6 +286,7 @@ def get_image_generators():
 
     return train_gen, validation_gen, test_gen
 
+#train_generator, validation_generator, test_generator = get_image_generators()
 
 def get_image_files(image_dir):
   fs = glob("{}/*.jpeg".format(image_dir))
