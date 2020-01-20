@@ -42,13 +42,13 @@ os.environ['PYTHONHASHSEED'] = '0'
 # Set the numpy seed
 np.random.seed(111)
 # Disable multi-threading in tensorflow ops
-session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
 # Set the random seed in tensorflow at graph level
-tf.set_random_seed(111)
+tf.compat.v1.set_random_seed(111)
 # Define a tensorflow session with above session configs
-sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
 # Set the session in keras
-K.set_session(sess)
+tf.compat.v1.keras.backend.set_session(sess)
 # Make the augmentation sequence deterministic
 aug.seed(111)
 
@@ -171,8 +171,8 @@ def data_gen(data, batch_size):
                 break
             
         i+=1
-        print(batch_data)
-        print(batch_labels)
+        # print(batch_data)
+        # print(batch_labels)
         yield batch_data, batch_labels
             
         if i>=steps:
