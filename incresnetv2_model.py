@@ -209,7 +209,7 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
-        
+
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -246,13 +246,13 @@ def decode_imgs_to_data(cases):
 
 
 def create_numpy_binary(np_arr, file_path, file_name):
-    os.chdir(file_path)    
+    os.chdir(file_path)
 
     # Check whether .csv-file exists, if so create new one as to not overwrite old one
     bin_file_name_orig = file_name
     bin_file_name = bin_file_name_orig
     bin_exists = True
-    
+
     counter = 1
     while bin_exists:
         bin_file = Path(os.path.join(file_path, bin_file_name))
@@ -261,11 +261,11 @@ def create_numpy_binary(np_arr, file_path, file_name):
             break
         bin_file_name = bin_file_name_orig + str(counter)
         counter += 1
-    
+
     # Create .csv-file
     res_path = os.path.join(file_path, bin_file_name)
     np.save(res_path, np_arr, allow_pickle=True, fix_imports=False)
-    print(res_path)   
+    print(res_path)
 
 def create_all_binary_files():
     # create_numpy_binary(train_data, bin_file_dir, 'TRAIN_DATA_set')
@@ -304,7 +304,7 @@ def load_numpy_binary(file_path):
                 test_labels = np.load(npy_file, mmap_mode=None, allow_pickle=True, fix_imports=True)
             else:
                 print("Test data file doesn't mention data type")
-        
+
     # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
     return val_dat, val_labels, test_dat, test_labels
 
@@ -411,5 +411,5 @@ def create_model():
 
 get_image_data()
 res_model = create_model()
-res_model.save('incresnetv2_model.h5')
-#res_model.summary()
+res_model.save('incresnetv2_model_.h5')
+res_model.summary()
