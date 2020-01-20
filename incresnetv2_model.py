@@ -42,13 +42,13 @@ os.environ['PYTHONHASHSEED'] = '0'
 # Set the numpy seed
 np.random.seed(111)
 # Disable multi-threading in tensorflow ops
-session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
 # Set the random seed in tensorflow at graph level
-tf.set_random_seed(111)
+tf.compat.v1.set_random_seed(111)
 # Define a tensorflow session with above session configs
-sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
 # Set the session in keras
-K.set_session(sess)
+tf.compat.v1.keras.backend.set_session(sess)
 # Make the augmentation sequence deterministic
 aug.seed(111)
 
@@ -195,7 +195,12 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
+<<<<<<< HEAD
 
+=======
+        # print(batch_data)
+        # print(batch_labels)
+>>>>>>> floris-stuff-works-still
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -249,6 +254,13 @@ def create_all_binary_files():
     create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
     create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
 
+<<<<<<< HEAD
+=======
+val_data, val_labels = decode_imgs_to_data(val_data)
+test_data, test_labels = decode_imgs_to_data(test_data)
+# write_to_csv(val_data, val_labels, 'validation_set')
+print("Finished decoding all imgs to data.")
+>>>>>>> floris-stuff-works-still
 
 def load_numpy_binary(file_path):
     os.chdir(file_path)
@@ -313,7 +325,7 @@ def create_model():
     model = applications.inception_resnet_v2.InceptionResNetV2(
         include_top=True, #Default:(299,299,3)
         weights='imagenet',
-        pooling='avg'
+        pooling='max'
     )
     # Freeze layers
     for layer in model.layers:
@@ -321,28 +333,27 @@ def create_model():
 
     # Add trainable layers to the model
     x = model.output
-    print("model shape")
-    print(x.shape)
-    #x = Flatten()(x)
-    x = Dense(1024, activation='relu')(x)
-    x = Dropout(0.7, name='dropout1')(x)
-    x = Dense(512, activation='relu')(x)
-    x = Dropout(0.5, name='dropout2')(x)
-    print("input to softmax shape")
-    print(x.shape)
+
+    model.summary()
+
     predictions = Dense(3, activation='softmax')(x)
 
     # Create the final model and compile it
     final_model = Model(inputs=model.input, outputs = predictions)
 
     # Compile model with optimization setting
-    opt = Adam(lr=0.0001, decay=1e-5)
+    opt = Adam(lr=0.001, decay=1e-5)
     final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
+<<<<<<< HEAD
     chkpt = ModelCheckpoint(filepath='weights.{epoch:02d}-{val_loss:.2f}-{val_acc:.2f}.hdf5', save_best_only=False, save_weights_only=True)
 
+=======
+    chkpt = ModelCheckpoint(filepath='best_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+>>>>>>> floris-stuff-works-still
     # Fit the model
     final_model.fit_generator(
         train_data_gen,
@@ -356,5 +367,31 @@ def create_model():
 
 get_image_data()
 res_model = create_model()
+<<<<<<< HEAD
 res_model.save('incresnetv2_model_.h5')
 res_model.summary()
+=======
+res_model.save('incresnetv2_model_with_flatten.h5')
+#res_model.summary()
+
+test_model = tf.keras.models.load_model('incresnetv2_model.h5')
+loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
+print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# Get predictions
+preds = test_model.predict(test_data, batch_size=16)
+preds = np.argmax(preds, axis=-1)
+
+# Original labels
+orig_test_labels = np.argmax(test_labels, axis=-1)
+
+print(orig_test_labels.shape)
+print(preds.shape)
+
+cm  = confusion_matrix(orig_test_labels, preds)
+plt.figure()
+plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.show()
+>>>>>>> floris-stuff-works-still
