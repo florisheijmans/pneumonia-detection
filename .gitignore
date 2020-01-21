@@ -133,3 +133,4 @@ images
 
 *.hdf5
 *.h5
+.vscode/settings.json
