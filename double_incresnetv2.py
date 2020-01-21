@@ -66,7 +66,7 @@ val_data_dir = Path("chest_xray/images/val")
 test_data_dir = Path("chest_xray/images/test")
 normpneum_batch_size = 16
 bactviral_batch_size = 16
-nb_epochs = 10
+nb_epochs = 20
 normpneum_nb_train_steps = total_train_imgs / nb_epochs
 bactviral_nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
@@ -324,8 +324,9 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-        include_top=True, #Default:(299,299,3)
+        include_top=False, #Default:(299,299,3)
         weights='imagenet',
+        input_shape=(299,299,3),
         pooling='max'
     )
     # Freeze layers
@@ -361,26 +362,23 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
 def create_normpneum_model():
     checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
-    return create_model(normpneum_train_data_gen,
-                        normpneum_val_data, normpneum_val_labels, 
-                        checkpoint, normpneum_nb_train_steps
-                        )
+    return create_model(
+        normpneum_train_data_gen,
+        normpneum_val_data, normpneum_val_labels, 
+        checkpoint, normpneum_nb_train_steps
+    )
 
 def create_bactviral_model():
     checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
-    return create_model(bactviral_train_data_gen,
-                        bactviral_val_data, bactviral_val_labels, 
-                        checkpoint, bactviral_nb_train_steps
-                        )
+    return create_model(
+        bactviral_train_data_gen,
+        bactviral_val_data, bactviral_val_labels, 
+        checkpoint, bactviral_nb_train_steps
+    )
 
 
-#get_image_data()
-# normpneum_model = create_normpneum_model()
-# bactviral_model = create_bactviral_model()
-# # Save best models
-# normpneum_model.save('incresnetv2_normpneum_model.h5')
-# bactviral_model.save('incresnetv2_bactviral_model.h5')
+get_image_data()
 
 normpneum_test_model = load_model('incresnetv2_normpneum_model.h5')
 bactviral_test_model = load_model('incresnetv2_bactviral_model.h5')

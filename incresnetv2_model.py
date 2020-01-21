@@ -375,12 +375,7 @@ plt.show()
 # plt.show()
 
 # layer_name = 'conv_7b'
-
-# print(test_model.get_layer(layer_name).output)
-
 # img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
-
-# print(Model(inputs=test_model.input, outputs=test_model.get_layer(layer_name).output).predict(img_array))
 
 # score_cam = ScoreCam(test_model,img_array,layer_name)
 # score_cam_superimposed = superimpose('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', score_cam)
