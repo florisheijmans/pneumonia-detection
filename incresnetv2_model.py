@@ -56,7 +56,7 @@ total_train_imgs = 5098
 total_val_imgs = 519
 
 cwd = os.getcwd()
-bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs")
+bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs", "three_cases")
 
 # Define hyperparameters
 img_width, img_height = 299, 299
@@ -123,11 +123,6 @@ def create_image_data(data_dir):
     print("Got all image data from", data_dir)
     return dat
 
-# Augmentation sequence
-seq = iaa.OneOf([
-    iaa.Fliplr(), # horizontal flips
-    iaa.Affine(rotate=20), # roatation
-    iaa.Multiply((1.2, 1.5))]) #random brightness
 
 def data_gen(data, batch_size):
     # Get total number of samples in the data
@@ -140,6 +135,12 @@ def data_gen(data, batch_size):
 
     # Get a numpy array of all the indices of the input data
     indices = np.arange(n)
+
+    # Augmentation sequence
+    seq = iaa.OneOf([
+        iaa.Fliplr(), # horizontal flips
+        iaa.Affine(rotate=20), # roatation
+        iaa.Multiply((1.2, 1.5))]) #random brightness
 
     # Initialize a counter
     i = 0
@@ -229,7 +230,6 @@ def decode_imgs_to_data(cases):
 
 def create_numpy_binary(np_arr, file_path, file_name):
     print(f"Creating binary file for: {file_name}")
-
     bin_file_name = file_name
 
     # Create .npy-file
@@ -251,7 +251,6 @@ def create_all_binary_files():
 # print("Finished decoding all imgs to data.")
 
 def load_numpy_binary(file_path):
-    os.chdir(file_path)
     file_path = Path(file_path)
 
     # Get the list of all the images
