@@ -77,8 +77,7 @@ def get_image_data():
     # Get lists
     try:
         val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
-        print(f"val_data:\n{val_data.shape[0]}")
-        print("Try: Loaded validation and test data")
+        print("Try accepted: Loaded validation and test data")
     except:
         print("Except: Getting all image lists")
         val_dat = create_image_data(val_data_dir)
@@ -115,8 +114,6 @@ def create_image_data(data_dir):
     dat = []
     # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
     for img in normal_cases:
-        if data_dir == val_data_dir:
-            print("append normal in VAL data")
         dat.append((img, 0))
     for img in bacterial_cases:
         dat.append((img, 1))
