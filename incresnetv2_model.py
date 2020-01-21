@@ -15,7 +15,7 @@ from PIL import Image
 from pathlib import Path
 from skimage.io import imread
 from skimage.transform import resize
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
@@ -35,6 +35,9 @@ from sklearn.metrics import confusion_matrix
 import cv2
 from keras import backend as K
 import tensorflow as tf
+
+# Visualisation
+from gradcamutils import GradCam, GradCamPlusPlus, ScoreCam, build_guided_model, GuidedBackPropagation, superimpose, read_and_preprocess_img
 
 
 # Set the seed for hash based operations in python
@@ -286,28 +289,6 @@ def load_numpy_binary(file_path):
     print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
 
-def get_image_generators():
-    # Decompose images
-    test_datagen = ImageDataGenerator()
-    val_datagen = ImageDataGenerator()
-    train_datagen = ImageDataGenerator(featurewise_center=True, featurewise_std_normalization=True)
-
-    # Create set generators
-    train_gen = train_datagen.flow_from_directory(
-            train_data_dir,
-            target_size=(img_width, img_height),
-            batch_size=batch_size)
-    validation_gen = val_datagen.flow_from_directory(
-            val_data_dir,
-            target_size=(img_width, img_height),
-            batch_size=batch_size)
-    test_gen = test_datagen.flow_from_directory(
-            test_data_dir,
-            target_size=(img_width, img_height),
-            batch_size=batch_size)
-
-    return train_gen, validation_gen, test_gen
-
 def create_model():
     print("Start creating model")
     # Get pretrained model
@@ -351,26 +332,40 @@ def create_model():
 
 get_image_data()
 res_model = create_model()
-res_model.save('incresnetv2_model_with_flatten.h5')
+res_model.save('incresnetv2_model.h5')
 #res_model.summary()
 
-test_model = tf.keras.models.load_model('incresnetv2_model.h5')
-loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
-print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+# test_model = tf.compat.v1.keras.preprocessing.image.load_img('D:\Studie\Git-repos\pneumonia-babies\incresnetv2_model.h5')
+# loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
+# print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
 
-# Get predictions
-preds = test_model.predict(test_data, batch_size=16)
-preds = np.argmax(preds, axis=-1)
+# # Get predictions
+# preds = test_model.predict(test_data, batch_size=16)
+# preds = np.argmax(preds, axis=-1)
 
-# Original labels
-orig_test_labels = np.argmax(test_labels, axis=-1)
+# # Original labels
+# orig_test_labels = np.argmax(test_labels, axis=-1)
 
-print(orig_test_labels.shape)
-print(preds.shape)
+# print(orig_test_labels.shape)
+# print(preds.shape)
 
-cm  = confusion_matrix(orig_test_labels, preds)
-plt.figure()
-plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
-plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
-plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+# cm  = confusion_matrix(orig_test_labels, preds)
+# plt.figure()
+# plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+# plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+# plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+# plt.show()
+
+# Visualise results
+orig_img = np.array(load_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg'),dtype=np.uint8)
+plt.imshow(orig_img)
+plt.show()
+
+
+layer_name = 'conv_7b'
+img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
+
+score_cam = ScoreCam(res_model,img_array,layer_name)
+
+plt.imshow(score_cam)
 plt.show()
