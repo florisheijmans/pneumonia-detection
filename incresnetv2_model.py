@@ -326,42 +326,65 @@ def create_model():
 
     return final_model
 
+# Load train, validation and test set
 get_image_data()
-res_model = create_model()
-res_model.save('incresnetv2_model.h5')
-#res_model.summary()
 
-# test_model = tf.compat.v1.keras.preprocessing.image.load_img('D:\Studie\Git-repos\pneumonia-babies\incresnetv2_model.h5')
-# loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
-# print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+# -----------------------
+# Create & save the model
+# -----------------------
 
-# # Get predictions
-# preds = test_model.predict(test_data, batch_size=16)
-# preds = np.argmax(preds, axis=-1)
+# res_model = create_model()
+# res_model.save('incresnetv2_model.h5')
+# res_model.summary()
 
-# # Original labels
-# orig_test_labels = np.argmax(test_labels, axis=-1)
 
-# print(orig_test_labels.shape)
-# print(preds.shape)
+# --------------
+# Test the model
+# --------------
 
-# cm  = confusion_matrix(orig_test_labels, preds)
-# plt.figure()
-# plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
-# plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
-# plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+test_model = load_model('incresnetv2_model.h5')
+
+test_model.summary()
+
+loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
+print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# Get predictions
+preds = test_model.predict(test_data, batch_size=16)
+preds = np.argmax(preds, axis=-1)
+
+# Original labels
+orig_test_labels = np.argmax(test_labels, axis=-1)
+
+print(orig_test_labels.shape)
+print(preds.shape)
+
+cm  = confusion_matrix(orig_test_labels, preds)
+plt.figure()
+plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
+plt.show()
+
+
+# -----------------
+# Visualise results
+# -----------------
+
+# orig_img = np.array(load_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg'),dtype=np.uint8)
+# plt.imshow(orig_img)
 # plt.show()
 
-# Visualise results
-orig_img = np.array(load_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg'),dtype=np.uint8)
-plt.imshow(orig_img)
-plt.show()
+# layer_name = 'conv_7b'
 
+# print(test_model.get_layer(layer_name).output)
 
-layer_name = 'conv_7b'
-img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
+# img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
 
-score_cam = ScoreCam(res_model,img_array,layer_name)
+# print(Model(inputs=test_model.input, outputs=test_model.get_layer(layer_name).output).predict(img_array))
 
-plt.imshow(score_cam)
-plt.show()
+# score_cam = ScoreCam(test_model,img_array,layer_name)
+# score_cam_superimposed = superimpose('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', score_cam)
+
+# plt.imshow(score_cam_superimposed)
+# plt.show()
