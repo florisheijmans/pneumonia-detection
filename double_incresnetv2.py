@@ -15,7 +15,7 @@ from PIL import Image
 from pathlib import Path
 from skimage.io import imread
 from skimage.transform import resize
-from keras.models import Sequential, Model, load_model
+from keras.models import Sequential, Model
 from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
@@ -35,9 +35,6 @@ from sklearn.metrics import confusion_matrix
 import cv2
 from keras import backend as K
 import tensorflow as tf
-
-# Visualisation
-from gradcamutils import GradCam, GradCamPlusPlus, ScoreCam, build_guided_model, GuidedBackPropagation, superimpose, read_and_preprocess_img
 
 
 # Set the seed for hash based operations in python
@@ -59,49 +56,89 @@ total_train_imgs = 5098
 total_val_imgs = 519
 
 cwd = os.getcwd()
-bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs", "three_cases")
+normpneum_bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs", "normal_pneum")
+bactviral_bin_file_dir = os.path.join(cwd, "chest_xray", "decoded_imgs", "bact_viral") 
 
 # Define hyperparameters
 img_width, img_height = 299, 299
 train_data_dir = Path("chest_xray/images/train")
 val_data_dir = Path("chest_xray/images/val")
 test_data_dir = Path("chest_xray/images/test")
-batch_size = 16
+normpneum_batch_size = 16
+bactviral_batch_size = 16
 nb_epochs = 10
-nb_train_steps = total_train_imgs / nb_epochs
+normpneum_nb_train_steps = total_train_imgs / nb_epochs
+bactviral_nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
 
 
 def get_image_data():
-    global test_data; global test_labels
-    global val_data; global val_labels
-    global test_data; global test_labels
+    # Globalise variables
+    global normpneum_test_data; global normpneum_test_labels
+    global normpneum_val_data; global normpneum_val_labels
+    global normpneum_test_data; global normpneum_test_labels
 
-    # Get lists
+    # Get normal-pneumonia lists
     try:
-        val_data, val_labels, test_data, test_labels = load_numpy_binary(bin_file_dir)
-        print("Try accepted: Loaded validation and test data")
+        normpneum_val_data, normpneum_val_labels, normpneum_test_data, normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
+        print("Try accepted: Loaded normal-pneumonial validation and test data")
     except:
-        print("Except: Getting all image lists")
-        val_dat = create_image_data(val_data_dir)
-        test_dat  = create_image_data(test_data_dir)
+        print("Except: Getting all normal-pneumonial image lists")
+        normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
+        normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
 
-        val_data, val_labels = decode_imgs_to_data(val_dat)
-        test_data, test_labels = decode_imgs_to_data(test_dat)
+        normpneum_val_data, normpneum_val_labels = decode_imgs_to_data(normpneum_val_dat)
+        normpneum_test_data, normpneum_test_labels = decode_imgs_to_data(normpneum_test_dat)
 
-        create_all_binary_files()
+        create_all_binary_files(
+                                normpneum_val_data, 
+                                normpneum_val_labels, 
+                                normpneum_test_data, 
+                                normpneum_test_labels,
+                                normpneum_bin_file_dir
+                                )
+
+    # Globalise variables
+    global bactviral_test_data; global bactviral_test_labels
+    global bactviral_val_data; global bactviral_val_labels
+    global bactviral_test_data; global bactviral_test_labels
+
+    # Get bacterial-viral lists
+    try:
+        bactviral_val_data, bactviral_val_labels, bactviral_test_data, bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
+        print("Try accepted: Loaded bacterial-viral validation and test data")
+    except:
+        print("Except: Getting all bacterial-viral image lists")
+        normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
+        normpneum_test_dat, bactviral_test_dat  = create_image_data(test_data_dir)
+
+        bactviral_val_data, bactviral_val_labels = decode_imgs_to_data(bactviral_val_dat)
+        bactviral_test_data, bactviral_test_labels = decode_imgs_to_data(bactviral_test_dat)
+
+        create_all_binary_files(
+                                bactviral_val_data, 
+                                bactviral_val_labels, 
+                                bactviral_test_data, 
+                                bactviral_test_labels,
+                                bactviral_bin_file_dir
+                                )
 
     # Read training data
-    train_dat = create_image_data(train_data_dir)
+    normpneum_train_dat, bactviral_train_dat = create_image_data(train_data_dir)
     # Convert to pandas data frame
-    train_data = pd.DataFrame(train_dat, columns=['image', 'label'], index=None)
+    normpneum_train_data = pd.DataFrame(normpneum_train_dat, columns=['image', 'label'], index=None)
+    bactviral_train_data = pd.DataFrame(bactviral_train_dat, columns=['image', 'label'], index=None)
 
-    # Get a train data generator
-    global train_data_gen
-    train_data_gen = data_gen(data=train_data, batch_size=batch_size)
+    # Get a train data generators
+    global normpneum_train_data_gen
+    normpneum_train_data_gen = data_gen(data=normpneum_train_data, batch_size=normpneum_batch_size)
+    global bactviral_train_data_gen
+    bactviral_train_data_gen = data_gen(data=bactviral_train_data, batch_size=bactviral_batch_size)
 
     # Define the number of training steps
-    nb_train_steps = train_data.shape[0]//batch_size
+    normpneum_nb_train_steps = normpneum_train_data.shape[0]//normpneum_batch_size
+    bactviral_nb_train_steps = bactviral_train_data.shape[0]//bactviral_batch_size
+
 
 def create_image_data(data_dir):
     # Dirs
@@ -114,17 +151,20 @@ def create_image_data(data_dir):
     viral_cases = viral_dir.glob('*.jpeg')
 
     # Initialise lists to put all the images in, along with their labels: (img, label)
-    dat = []
-    # Add images to its list and label them: No-Pneumonia: 0, Bacterial: 1, Viral: 2
+    norm_pneum_dat = []
+    bact_viral_dat = []
+    # Add images to its list and label them: Normal: 0, and Pneumonia: 1
     for img in normal_cases:
-        dat.append((img, 0))
+        norm_pneum_dat.append((img, 0))
     for img in bacterial_cases:
-        dat.append((img, 1))
+        norm_pneum_dat.append((img, 1))
+        bact_viral_dat.append((img, 0))
     for img in viral_cases:
-        dat.append((img, 2))
+        norm_pneum_dat.append((img, 1))
+        bact_viral_dat.append((img, 1))
 
     print("Got all image data from", data_dir)
-    return dat
+    return norm_pneum_dat, bact_viral_dat
 
 
 def data_gen(data, batch_size):
@@ -134,7 +174,7 @@ def data_gen(data, batch_size):
 
     # Define two numpy arrays for containing batch data and labels
     batch_data = np.zeros((batch_size, 299, 299, 3), dtype=np.float32)
-    batch_labels = np.zeros((batch_size, 3), dtype=np.float32)
+    batch_labels = np.zeros((batch_size, 2), dtype=np.float32)
 
     # Get a numpy array of all the indices of the input data
     indices = np.arange(n)
@@ -157,7 +197,7 @@ def data_gen(data, batch_size):
             label = data.iloc[idx]['label']
 
             # one hot encoding
-            encoded_label = to_categorical(label, num_classes=3)
+            encoded_label = to_categorical(label, num_classes=2)
             # read the image and resize
             img_dat = mimg.imread(str(img_name))
             img_dat = cv2.resize(img_dat, (299,299))
@@ -196,7 +236,6 @@ def data_gen(data, batch_size):
                 break
 
         i+=1
-        
         yield batch_data, batch_labels
 
         if i>=steps:
@@ -210,7 +249,7 @@ def decode_imgs_to_data(cases):
     # Append all images to dat and labels
     counter = 0
     for img in cases:
-        label = to_categorical(img[1], num_classes=3)
+        label = to_categorical(img[1], num_classes=2)
         img = mimg.imread(str(img[0]))
         img = cv2.resize(img, (299,299))
         if len(img) <= 2:
@@ -240,18 +279,13 @@ def create_numpy_binary(np_arr, file_path, file_name):
     np.save(res_path, np_arr)
     print(res_path)
 
-def create_all_binary_files():
-    # create_numpy_binary(train_data, bin_file_dir, 'TRAIN_DATA_set')
-    # create_numpy_binary(train_labels, bin_file_dir, 'TRAIN_LABELS_set')
+
+def create_all_binary_files(val_data, val_labels, test_data, test_labels, bin_file_dir):
     create_numpy_binary(val_data, bin_file_dir, 'VALIDATION_DATA_set')
     create_numpy_binary(val_labels, bin_file_dir, 'VALIDATION_LABELS_set')
     create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
     create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
 
-# val_data, val_labels = decode_imgs_to_data(val_data)
-# test_data, test_labels = decode_imgs_to_data(test_data)
-# # write_to_csv(val_data, val_labels, 'validation_set')
-# print("Finished decoding all imgs to data.")
 
 def load_numpy_binary(file_path):
     file_path = Path(file_path)
@@ -285,7 +319,8 @@ def load_numpy_binary(file_path):
     print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
 
-def create_model():
+
+def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
@@ -299,25 +334,22 @@ def create_model():
 
     # Add trainable layers to the model
     x = model.output
-
-    model.summary()
-
-    predictions = Dense(3, activation='softmax')(x)
+    #model.summary()
+    predictions = Dense(2, activation='softmax')(x)
 
     # Create the final model and compile it
-    final_model = Model(inputs=model.input, outputs = predictions)
+    final_model = Model(inputs=model.input, outputs=predictions)
 
     # Compile model with optimization setting
     opt = Adam(lr=0.001, decay=1e-5)
-    final_model.compile(loss='categorical_crossentropy', metrics=['accuracy'],optimizer=opt)
+    final_model.compile(loss='binary_crossentropy', metrics=['accuracy'],optimizer=opt)
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
-    chkpt = ModelCheckpoint(filepath='best_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
 
     # Fit the model
     final_model.fit_generator(
-        train_data_gen,
+        train_data_generator,
         steps_per_epoch = nb_train_steps,
         epochs = nb_epochs,
         validation_data = (val_data, val_labels),
@@ -326,65 +358,26 @@ def create_model():
 
     return final_model
 
-# Load train, validation and test set
+def create_normpneum_model():
+    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(normpneum_train_data_gen,
+                        normpneum_val_data, normpneum_val_labels, 
+                        checkpoint, normpneum_nb_train_steps
+                        )
+
+def create_bactviral_model():
+    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(bactviral_train_data_gen,
+                        bactviral_val_data, bactviral_val_labels, 
+                        checkpoint, bactviral_nb_train_steps
+                        )
+
+
 get_image_data()
-
-# -----------------------
-# Create & save the model
-# -----------------------
-
-# res_model = create_model()
-# res_model.save('incresnetv2_model.h5')
-# res_model.summary()
-
-
-# --------------
-# Test the model
-# --------------
-
-test_model = load_model('incresnetv2_model.h5')
-
-test_model.summary()
-
-loss, acc = test_model.evaluate(test_data,  test_labels, verbose=2)
-print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
-
-# Get predictions
-preds = test_model.predict(test_data, batch_size=16)
-preds = np.argmax(preds, axis=-1)
-
-# Original labels
-orig_test_labels = np.argmax(test_labels, axis=-1)
-
-print(orig_test_labels.shape)
-print(preds.shape)
-
-cm  = confusion_matrix(orig_test_labels, preds)
-plt.figure()
-plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
-plt.xticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
-plt.yticks(range(3), ['Normal', 'Bacterial', 'Viral'], fontsize=16)
-plt.show()
-
-
-# -----------------
-# Visualise results
-# -----------------
-
-# orig_img = np.array(load_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg'),dtype=np.uint8)
-# plt.imshow(orig_img)
-# plt.show()
-
-# layer_name = 'conv_7b'
-
-# print(test_model.get_layer(layer_name).output)
-
-# img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
-
-# print(Model(inputs=test_model.input, outputs=test_model.get_layer(layer_name).output).predict(img_array))
-
-# score_cam = ScoreCam(test_model,img_array,layer_name)
-# score_cam_superimposed = superimpose('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', score_cam)
-
-# plt.imshow(score_cam_superimposed)
-# plt.show()
+normpneum_model = create_normpneum_model()
+bactviral_model = create_bactviral_model()
+# Save best models
+normpneum_model.save('incresnetv2_normpneum_model.h5')
+bactviral_model.save('incresnetv2_bactviral_model.h5')
