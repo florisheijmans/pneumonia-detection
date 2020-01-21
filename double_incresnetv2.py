@@ -15,7 +15,7 @@ from PIL import Image
 from pathlib import Path
 from skimage.io import imread
 from skimage.transform import resize
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
@@ -66,7 +66,7 @@ val_data_dir = Path("chest_xray/images/val")
 test_data_dir = Path("chest_xray/images/test")
 normpneum_batch_size = 16
 bactviral_batch_size = 16
-nb_epochs = 10
+nb_epochs = 20
 normpneum_nb_train_steps = total_train_imgs / nb_epochs
 bactviral_nb_train_steps = total_train_imgs / nb_epochs
 nb_val_steps = total_val_imgs
@@ -324,8 +324,9 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
     print("Start creating model")
     # Get pretrained model
     model = applications.inception_resnet_v2.InceptionResNetV2(
-        include_top=True, #Default:(299,299,3)
+        include_top=False, #Default:(299,299,3)
         weights='imagenet',
+        input_shape=(299,299,3),
         pooling='max'
     )
     # Freeze layers
@@ -361,23 +362,70 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
 def create_normpneum_model():
     checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
-    return create_model(normpneum_train_data_gen,
-                        normpneum_val_data, normpneum_val_labels, 
-                        checkpoint, normpneum_nb_train_steps
-                        )
+    return create_model(
+        normpneum_train_data_gen,
+        normpneum_val_data, normpneum_val_labels, 
+        checkpoint, normpneum_nb_train_steps
+    )
 
 def create_bactviral_model():
     checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
-    return create_model(bactviral_train_data_gen,
-                        bactviral_val_data, bactviral_val_labels, 
-                        checkpoint, bactviral_nb_train_steps
-                        )
+    return create_model(
+        bactviral_train_data_gen,
+        bactviral_val_data, bactviral_val_labels, 
+        checkpoint, bactviral_nb_train_steps
+    )
 
 
 get_image_data()
-normpneum_model = create_normpneum_model()
-bactviral_model = create_bactviral_model()
-# Save best models
-normpneum_model.save('incresnetv2_normpneum_model.h5')
-bactviral_model.save('incresnetv2_bactviral_model.h5')
+
+# Create & save best models
+# normpneum_model = create_normpneum_model()
+# normpneum_model.save('incresnetv2_normpneum_model.h5')
+
+# bactviral_model = create_bactviral_model()
+# bactviral_model.save('incresnetv2_bactviral_model.h5')
+
+model = applications.inception_resnet_v2.InceptionResNetV2(
+    include_top=False, #Default:(299,299,3)
+    weights='imagenet',
+    input_shape=(299,299,3),
+    pooling='max'
+)
+# Freeze layers
+for layer in model.layers:
+    layer.trainable = False
+
+# Add trainable layers to the model
+x = model.output
+#model.summary()
+predictions = Dense(2, activation='softmax')(x)
+
+# Create the final model and compile it
+final_model = Model(inputs=model.input, outputs=predictions)
+
+# Compile model with optimization setting
+opt = Adam(lr=0.001, decay=1e-5)
+final_model.compile(loss='binary_crossentropy', metrics=['accuracy'],optimizer=opt)
+
+
+final_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+
+loss, acc = final_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
+print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# Get predictions
+preds = final_model.predict(bactviral_test_data, batch_size=16)
+preds = np.argmax(preds, axis=-1)
+
+# Original labels
+orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+
+cm  = confusion_matrix(orig_test_labels, preds)
+plt.figure()
+plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+plt.show()
