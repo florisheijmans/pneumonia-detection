@@ -254,7 +254,6 @@ def create_all_binary_files():
 # print("Finished decoding all imgs to data.")
 
 def load_numpy_binary(file_path):
-    os.chdir(file_path)
     file_path = Path(file_path)
 
     # Get the list of all the images
