@@ -19,7 +19,6 @@ from keras.models import Sequential, Model, load_model
 from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
-from keras.models import Sequential
 from keras.layers import Conv2D, MaxPooling2D, Dense, Dropout, Input, Flatten, SeparableConv2D
 from keras.layers import GlobalMaxPooling2D
 from keras.layers.normalization import BatchNormalization

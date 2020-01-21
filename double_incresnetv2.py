@@ -15,7 +15,7 @@ from PIL import Image
 from pathlib import Path
 from skimage.io import imread
 from skimage.transform import resize
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras import applications
 from keras.applications.vgg16 import VGG16, preprocess_input
 from keras.preprocessing.image import ImageDataGenerator,load_img, img_to_array
@@ -316,7 +316,7 @@ def load_numpy_binary(file_path):
                 print("Test data file doesn't mention data type")
 
     # return train_dat, train_labels, val_dat, val_labels, test_dat, test_labels
-    print(val_dat[0])
+    # print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
 
 
@@ -375,9 +375,35 @@ def create_bactviral_model():
                         )
 
 
-get_image_data()
-normpneum_model = create_normpneum_model()
-bactviral_model = create_bactviral_model()
-# Save best models
-normpneum_model.save('incresnetv2_normpneum_model.h5')
-bactviral_model.save('incresnetv2_bactviral_model.h5')
+#get_image_data()
+# normpneum_model = create_normpneum_model()
+# bactviral_model = create_bactviral_model()
+# # Save best models
+# normpneum_model.save('incresnetv2_normpneum_model.h5')
+# bactviral_model.save('incresnetv2_bactviral_model.h5')
+
+normpneum_test_model = load_model('incresnetv2_normpneum_model.h5')
+bactviral_test_model = load_model('incresnetv2_bactviral_model.h5')
+
+
+def combined_classify():
+    #for case in normpneum_test_data:
+    normpneum_class_preds = normpneum_test_model.predict_classes(normpneum_test_data, batch_size=normpneum_batch_size)
+    # Save results in .csv-file
+    csv_path = normpneum_bin_file_dir + '.csv'
+    normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+    normpneum_preds_df.to_csv(csv_path)
+
+    # Select pneumonial cases for next model
+    pneum_indices = np.where(normpneum_class_preds == 1)
+    pneum_cases = np.take(normpneum_test_data, pneum_indices)
+
+    # Predict selected cases with bacterial-viral model
+    bactviral_class_preds = bactviral_test_model(pneum_cases, batch_size=bactviral_batch_size)
+    # Save results in .csv-file
+    csv_path = bactviral_bin_file_dir + '.csv'
+    bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+    bactviral_preds_df.to_csv(csv_path)
+    
+
+combined_classify()
