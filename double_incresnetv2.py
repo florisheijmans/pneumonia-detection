@@ -80,10 +80,7 @@ def get_image_data():
 
     # Get normal-pneumonia lists
     try:
-        normpneum_val_data,
-        normpneum_val_labels,
-        normpneum_test_data,
-        normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
+        normpneum_val_data, normpneum_val_labels, normpneum_test_data, normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
         print("Try accepted: Loaded normal-pneumonial validation and test data")
     except:
         print("Except: Getting all normal-pneumonial image lists")
@@ -108,10 +105,7 @@ def get_image_data():
 
     # Get bacterial-viral lists
     try:
-        bactviral_val_data, 
-        bactviral_val_labels, 
-        bactviral_test_data, 
-        bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
+        bactviral_val_data, bactviral_val_labels, bactviral_test_data, bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
         print("Try accepted: Loaded bacterial-viral validation and test data")
     except:
         print("Except: Getting all bacterial-viral image lists")
@@ -285,11 +279,13 @@ def create_numpy_binary(np_arr, file_path, file_name):
     np.save(res_path, np_arr)
     print(res_path)
 
+
 def create_all_binary_files(val_data, val_labels, test_data, test_labels, bin_file_dir):
     create_numpy_binary(val_data, bin_file_dir, 'VALIDATION_DATA_set')
     create_numpy_binary(val_labels, bin_file_dir, 'VALIDATION_LABELS_set')
     create_numpy_binary(test_data, bin_file_dir, 'TEST_DATA_set')
     create_numpy_binary(test_labels, bin_file_dir, 'TEST_LABELS_set')
+
 
 def load_numpy_binary(file_path):
     file_path = Path(file_path)
@@ -324,5 +320,64 @@ def load_numpy_binary(file_path):
     return val_dat, val_labels, test_dat, test_labels
 
 
+def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
+    print("Start creating model")
+    # Get pretrained model
+    model = applications.inception_resnet_v2.InceptionResNetV2(
+        include_top=True, #Default:(299,299,3)
+        weights='imagenet',
+        pooling='max'
+    )
+    # Freeze layers
+    for layer in model.layers:
+        layer.trainable = False
+
+    # Add trainable layers to the model
+    x = model.output
+    #model.summary()
+    predictions = Dense(2, activation='softmax')(x)
+
+    # Create the final model and compile it
+    final_model = Model(inputs=model.input, outputs=predictions)
+
+    # Compile model with optimization setting
+    opt = Adam(lr=0.001, decay=1e-5)
+    final_model.compile(loss='binary_crossentropy', metrics=['accuracy'],optimizer=opt)
+
+    # More optimization of model training
+    es = EarlyStopping(patience=5)
+
+    # Fit the model
+    final_model.fit_generator(
+        train_data_generator,
+        steps_per_epoch = nb_train_steps,
+        epochs = nb_epochs,
+        validation_data = (val_data, val_labels),
+        callbacks=[es, chkpt]
+    )
+
+    return final_model
+
+def create_normpneum_model():
+    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(normpneum_train_data_gen,
+                        normpneum_val_data, normpneum_val_labels, 
+                        checkpoint, normpneum_nb_train_steps
+                        )
+
+def create_bactviral_model():
+    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(bactviral_train_data_gen,
+                        bactviral_val_data, bactviral_val_labels, 
+                        checkpoint, bactviral_nb_train_steps
+                        )
+
 
 get_image_data()
+normpneum_model = create_normpneum_model()
+bactviral_model = create_bactviral_model()
+# Save best models
+normpneum_model.save('incresnetv2_normpneum_model.h5')
+bactviral_model.save('incresnetv2_bactviral_model.h5')
