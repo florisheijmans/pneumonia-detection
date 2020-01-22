@@ -323,33 +323,13 @@ def load_numpy_binary(file_path):
 def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
     print("Start creating model")
     # Get pretrained model
-    model = applications.inception_resnet_v2.InceptionResNetV2(
-        include_top=False, #Default:(299,299,3)
-        weights='imagenet',
-        input_shape=(299,299,3),
-        pooling='max'
-    )
-    # Freeze layers
-    for layer in model.layers:
-        layer.trainable = False
-
-    # Add trainable layers to the model
-    x = model.output
-    #model.summary()
-    predictions = Dense(2, activation='softmax')(x)
-
-    # Create the final model and compile it
-    final_model = Model(inputs=model.input, outputs=predictions)
-
-    # Compile model with optimization setting
-    opt = Adam(lr=0.001, decay=1e-5)
-    final_model.compile(loss='binary_crossentropy', metrics=['accuracy'],optimizer=opt)
+    model = create_empty_model()
 
     # More optimization of model training
     es = EarlyStopping(patience=5)
 
     # Fit the model
-    final_model.fit_generator(
+    model.fit_generator(
         train_data_generator,
         steps_per_epoch = nb_train_steps,
         epochs = nb_epochs,
@@ -357,7 +337,7 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
         callbacks=[es, chkpt]
     )
 
-    return final_model
+    return model
 
 def create_normpneum_model():
     checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
@@ -405,3 +385,52 @@ def combined_classify():
     
 
 combined_classify()
+
+
+def create_empty_model():
+    model = applications.inception_resnet_v2.InceptionResNetV2(
+        include_top=False, #Default:(299,299,3)
+        weights='imagenet',
+        input_shape=(299,299,3),
+        pooling='max'
+    )
+
+    # Freeze layers
+    for layer in model.layers:
+        layer.trainable = False
+
+    # Add trainable layers to the model
+    x = model.output
+    #model.summary()
+    predictions = Dense(2, activation='softmax')(x)
+
+    # Create the final model and compile it
+    final_model = Model(inputs=model.input, outputs=predictions)
+
+    # Compile model with optimization setting
+    opt = Adam(lr=0.001, decay=1e-5)
+    final_model.compile(loss='binary_crossentropy', metrics=['accuracy'],optimizer=opt)
+
+    return final_model
+
+
+# Example of testing bact vs viral
+test_model = creat_empty_model()
+test_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
+print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# Get predictions
+preds = test_model.predict(bactviral_test_data, batch_size=16)
+preds = np.argmax(preds, axis=-1)
+
+# Original labels
+orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+
+cm  = confusion_matrix(orig_test_labels, preds)
+plt.figure()
+plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+plt.show()
