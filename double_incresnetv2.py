@@ -319,74 +319,6 @@ def load_numpy_binary(file_path):
     # print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
 
-
-def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
-    print("Start creating model")
-    # Get pretrained model
-    model = create_empty_model()
-
-    # More optimization of model training
-    es = EarlyStopping(patience=5)
-
-    # Fit the model
-    model.fit_generator(
-        train_data_generator,
-        steps_per_epoch = nb_train_steps,
-        epochs = nb_epochs,
-        validation_data = (val_data, val_labels),
-        callbacks=[es, chkpt]
-    )
-
-    return model
-
-def create_normpneum_model():
-    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
-    
-    return create_model(
-        normpneum_train_data_gen,
-        normpneum_val_data, normpneum_val_labels, 
-        checkpoint, normpneum_nb_train_steps
-    )
-
-def create_bactviral_model():
-    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
-    
-    return create_model(
-        bactviral_train_data_gen,
-        bactviral_val_data, bactviral_val_labels, 
-        checkpoint, bactviral_nb_train_steps
-    )
-
-
-get_image_data()
-
-normpneum_test_model = load_model('incresnetv2_normpneum_model.h5')
-bactviral_test_model = load_model('incresnetv2_bactviral_model.h5')
-
-
-def combined_classify():
-    #for case in normpneum_test_data:
-    normpneum_class_preds = normpneum_test_model.predict_classes(normpneum_test_data, batch_size=normpneum_batch_size)
-    # Save results in .csv-file
-    csv_path = normpneum_bin_file_dir + '.csv'
-    normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
-    normpneum_preds_df.to_csv(csv_path)
-
-    # Select pneumonial cases for next model
-    pneum_indices = np.where(normpneum_class_preds == 1)
-    pneum_cases = np.take(normpneum_test_data, pneum_indices)
-
-    # Predict selected cases with bacterial-viral model
-    bactviral_class_preds = bactviral_test_model(pneum_cases, batch_size=bactviral_batch_size)
-    # Save results in .csv-file
-    csv_path = bactviral_bin_file_dir + '.csv'
-    bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
-    bactviral_preds_df.to_csv(csv_path)
-    
-
-combined_classify()
-
-
 def create_empty_model():
     model = applications.inception_resnet_v2.InceptionResNetV2(
         include_top=False, #Default:(299,299,3)
@@ -414,23 +346,95 @@ def create_empty_model():
     return final_model
 
 
-# Example of testing bact vs viral
-test_model = create_empty_model()
-test_model.load_weights('best_bactviral_checkpoint.hdf5')
+def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
+    print("Start creating model")
+    # Get pretrained model
+    model = create_empty_model()
 
-loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
-print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+    # More optimization of model training
+    es = EarlyStopping(patience=5)
 
-# Get predictions
-preds = test_model.predict(bactviral_test_data, batch_size=16)
-preds = np.argmax(preds, axis=-1)
+    # Fit the model
+    model.fit_generator(
+        train_data_generator,
+        steps_per_epoch = nb_train_steps,
+        epochs = nb_epochs,
+        validation_data = (val_data, val_labels),
+        callbacks=[es, chkpt]
+    )
 
-# Original labels
-orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+    return model
 
-cm  = confusion_matrix(orig_test_labels, preds)
-plt.figure()
-plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
-plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
-plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
-plt.show()
+
+def create_test_model():
+    # Example of testing bact vs viral
+    test_model = create_empty_model()
+    test_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+    loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
+    print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+    # Get predictions
+    preds = test_model.predict(bactviral_test_data, batch_size=16)
+    preds = np.argmax(preds, axis=-1)
+
+    # Original labels
+    orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+
+    cm  = confusion_matrix(orig_test_labels, preds)
+    plt.figure()
+    plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+    plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+    plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+    plt.show()
+
+
+def train_normpneum_model():
+    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(
+        normpneum_train_data_gen,
+        normpneum_val_data, normpneum_val_labels, 
+        checkpoint, normpneum_nb_train_steps
+    )
+
+def train_bactviral_model():
+    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(
+        bactviral_train_data_gen,
+        bactviral_val_data, bactviral_val_labels, 
+        checkpoint, bactviral_nb_train_steps
+    )
+
+
+get_image_data()
+
+normpneum_test_model = create_empty_model()
+normpneum_test_model.load_weights('best_normpneum_checkpoint.hdf5')
+bactviral_test_model = create_empty_model()
+bactviral_test_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+def combined_classify_to_csv():
+    # Get predictions of normal-pneumonia model
+    normpneum_class_preds = normpneum_test_model.predict(normpneum_test_data, batch_size=normpneum_batch_size)
+    normpneum_class_preds = np.argmax(normpneum_class_preds, axis=-1)
+    # Save results in .csv-file
+    csv_path = normpneum_bin_file_dir + '.csv'
+    normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+    normpneum_preds_df.to_csv(csv_path)
+
+    # Select pneumonial cases for next model
+    pneum_indices = np.where(normpneum_class_preds == 1)
+    pneum_cases = np.take(normpneum_test_data, pneum_indices)
+
+    # Predict selected cases with bacterial-viral model
+    bactviral_class_preds = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
+    bactviral_class_preds = np.argmax(bactviral_class_preds, axis=-1)
+    # Save results in .csv-file
+    csv_path = bactviral_bin_file_dir + '.csv'
+    bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+    bactviral_preds_df.to_csv(csv_path)
+
+
+combined_classify_to_csv()
