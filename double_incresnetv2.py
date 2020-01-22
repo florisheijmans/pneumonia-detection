@@ -35,6 +35,9 @@ from sklearn.metrics import confusion_matrix
 import cv2
 from keras import backend as K
 import tensorflow as tf
+from mlxtend.evaluate import mcnemar_table, mcnemar
+
+
 
 
 # Set the seed for hash based operations in python
@@ -408,12 +411,12 @@ def train_bactviral_model():
     )
 
 
-get_image_data()
+# get_image_data()
 
-normpneum_test_model = create_empty_model()
-normpneum_test_model.load_weights('best_normpneum_checkpoint.hdf5')
-bactviral_test_model = create_empty_model()
-bactviral_test_model.load_weights('best_bactviral_checkpoint.hdf5')
+# normpneum_test_model = create_empty_model()
+# normpneum_test_model.load_weights('best_normpneum_checkpoint.hdf5')
+# bactviral_test_model = create_empty_model()
+# bactviral_test_model.load_weights('best_bactviral_checkpoint.hdf5')
 
 def combined_classify_to_csv():
     # Get predictions of normal-pneumonia model
@@ -449,4 +452,29 @@ def combined_classify_to_csv():
     bactviral_res_df.to_csv(csv_path)
 
 
-combined_classify_to_csv()
+#combined_classify_to_csv()
+
+
+
+def statistics():
+    y_model1 = np.array([1,1,1,1,1,1,1])
+    y_model2 = np.array([1,1,1,1,1,1,1])
+    y_target = np.array([1,1,0,1,0,1,0])
+
+    
+    tb = mcnemar_table(y_target=y_target, 
+                       y_model1=y_model1, 
+                       y_model2=y_model2)
+
+    print (tb)
+    tb_b = np.array([[9945, 25],
+                 [15, 15]])
+
+    chi2, p = mcnemar(ary=tb_b, corrected=True)
+    print('chi-squared:', chi2)
+    print('p-value:', p)
+
+
+
+
+statistics()
