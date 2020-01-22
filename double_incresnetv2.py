@@ -35,6 +35,9 @@ from sklearn.metrics import confusion_matrix
 import cv2
 from keras import backend as K
 import tensorflow as tf
+from mlxtend.evaluate import mcnemar_table, mcnemar
+
+
 
 # Visualisation
 from gradcamutils import GradCam, GradCamPlusPlus, ScoreCam, build_guided_model, GuidedBackPropagation, superimpose, read_and_preprocess_img
@@ -375,8 +378,32 @@ def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_ste
 
     return model
 
-def create_normpneum_model():
-    checkpoint = ModelCheckpoint(filepath='best_normpneum_newrange_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+
+def create_test_model():
+    # Example of testing bact vs viral
+    test_model = create_empty_model()
+    test_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+    loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
+    print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+    # Get predictions
+    preds = test_model.predict(bactviral_test_data, batch_size=16)
+    preds = np.argmax(preds, axis=-1)
+
+    # Original labels
+    orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+
+    cm  = confusion_matrix(orig_test_labels, preds)
+    plt.figure()
+    plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+    plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+    plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+    plt.show()
+
+
+def train_normpneum_model():
+    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
     return create_model(
         normpneum_train_data_gen,
@@ -384,8 +411,8 @@ def create_normpneum_model():
         checkpoint, normpneum_nb_train_steps
     )
 
-def create_bactviral_model():
-    checkpoint = ModelCheckpoint(filepath='best_bactviral_newrange_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+def train_bactviral_model():
+    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
     
     return create_model(
         bactviral_train_data_gen,
@@ -418,6 +445,52 @@ bactviral_model.save('incv3_bactviral_model.h5')
 #     # Select pneumonial cases for next model
 #     pneum_indices = np.where(normpneum_class_preds == 1)
 #     pneum_cases = np.take(normpneum_test_data, pneum_indices)
+# get_image_data()
+
+# normpneum_test_model = create_empty_model()
+# normpneum_test_model.load_weights('best_normpneum_checkpoint.hdf5')
+# bactviral_test_model = create_empty_model()
+# bactviral_test_model.load_weights('best_bactviral_checkpoint.hdf5')
+
+def combined_classify_to_csv():
+    # Get predictions of normal-pneumonia model
+    try:
+        csv_path = normpneum_bin_file_dir + '.csv'
+        normpneum_res = pd.read_csv(csv_path).to_numpy()
+        normpneum_class_preds = normpneum_res[:,3]
+        print("Try succeeded: normal-pneumonia read from .csv-file")
+    except:
+        print("Except started: Start predicting Normal-Pneumonia cases")
+        normpneum_class_probs = normpneum_test_model.predict(normpneum_test_data, batch_size=normpneum_batch_size)
+        normpneum_class_preds = np.argmax(normpneum_class_probs, axis=-1)
+        # Save results in .csv-file
+        csv_path = normpneum_bin_file_dir + '.csv'
+        normpneum_probs_df = pd.DataFrame(normpneum_class_probs)
+        normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+        normpneum_res_df = pd.concat([normpneum_probs_df.reset_index(drop=True), normpneum_preds_df], axis=1)
+        normpneum_res_df.to_csv(csv_path, header=False)
+
+    # Select pneumonial cases for next model
+    pneum_indices = np.where(normpneum_class_preds == 1)
+    #pneum_cases = np.take(normpneum_test_data, pneum_indices)
+    pneum_cases = np.array([normpneum_test_data[i] for i in pneum_indices])[0]
+
+    # Get predictions of bacterial-viral model
+    try:
+        csv_path = bactviral_bin_file_dir + '.csv'
+        bactviral_res = pd.read_csv(csv_path).to_numpy()
+        bactviral_class_preds = bactviral_res[:,3]
+        print("Try succeeded: Bacterial-Viral read from .csv-file")
+    except:
+        print("Except started: Start predicting Bacterial-Viral cases")
+        bactviral_class_probs = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
+        bactviral_class_preds = np.argmax(bactviral_class_probs, axis=-1)
+        # Save results in .csv-file
+        csv_path = bactviral_bin_file_dir + '.csv'
+        bactviral_probs_df = pd.DataFrame(bactviral_class_probs)
+        bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+        bactviral_res_df = pd.concat([bactviral_probs_df.reset_index(drop=True), bactviral_preds_df], axis=1)
+        bactviral_res_df.to_csv(csv_path)
 
 #     # Predict selected cases with bacterial-viral model
 #     bactviral_class_preds = bactviral_test_model(pneum_cases, batch_size=bactviral_batch_size)
@@ -467,3 +540,29 @@ bactviral_model.save('incv3_bactviral_model.h5')
 # plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
 # plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
 # plt.show()
+#combined_classify_to_csv()
+
+
+
+def statistics():
+    y_model1 = np.array([1,1,1,1,1,1,1])
+    y_model2 = np.array([1,1,1,1,1,1,1])
+    y_target = np.array([1,1,0,1,0,1,0])
+
+    
+    tb = mcnemar_table(y_target=y_target, 
+                       y_model1=y_model1, 
+                       y_model2=y_model2)
+
+    print (tb)
+    tb_b = np.array([[9945, 25],
+                 [15, 15]])
+
+    chi2, p = mcnemar(ary=tb_b, corrected=True)
+    print('chi-squared:', chi2)
+    print('p-value:', p)
+
+
+
+
+statistics()
