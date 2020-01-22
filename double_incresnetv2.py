@@ -420,7 +420,7 @@ def combined_classify_to_csv():
     try:
         csv_path = normpneum_bin_file_dir + '.csv'
         normpneum_res = pd.read_csv(csv_path).to_numpy()
-        normpneum_class_preds = normpneum_res[2,:]
+        normpneum_class_preds = normpneum_res[:,3]
         print("Try succeeded: normal-pneumonia read from .csv-file")
     except:
         print("Except started: Start predicting Normal-Pneumonia cases")
@@ -437,16 +437,23 @@ def combined_classify_to_csv():
     pneum_indices = np.where(normpneum_class_preds == 1)
     #pneum_cases = np.take(normpneum_test_data, pneum_indices)
     pneum_cases = np.array([normpneum_test_data[i] for i in pneum_indices])[0]
-    # Predict selected cases with bacterial-viral model
-    print("Start predicting Bacterial-Viral cases")
-    bactviral_class_probs = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
-    bactviral_class_preds = np.argmax(bactviral_class_probs, axis=-1)
-    # Save results in .csv-file
-    csv_path = bactviral_bin_file_dir + '.csv'
-    bactviral_probs_df = pd.DataFrame(bactviral_class_probs)
-    bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
-    bactviral_res_df = pd.concat([bactviral_probs_df.reset_index(drop=True), bactviral_preds_df], axis=1)
-    bactviral_res_df.to_csv(csv_path)
+
+    # Get predictions of bacterial-viral model
+    try:
+        csv_path = bactviral_bin_file_dir + '.csv'
+        bactviral_res = pd.read_csv(csv_path).to_numpy()
+        bactviral_class_preds = bactviral_res[:,3]
+        print("Try succeeded: Bacterial-Viral read from .csv-file")
+    except:
+        print("Except started: Start predicting Bacterial-Viral cases")
+        bactviral_class_probs = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
+        bactviral_class_preds = np.argmax(bactviral_class_probs, axis=-1)
+        # Save results in .csv-file
+        csv_path = bactviral_bin_file_dir + '.csv'
+        bactviral_probs_df = pd.DataFrame(bactviral_class_probs)
+        bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+        bactviral_res_df = pd.concat([bactviral_probs_df.reset_index(drop=True), bactviral_preds_df], axis=1)
+        bactviral_res_df.to_csv(csv_path)
 
 
 combined_classify_to_csv()
