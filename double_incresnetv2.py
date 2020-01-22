@@ -36,6 +36,8 @@ import cv2
 from keras import backend as K
 import tensorflow as tf
 
+# Visualisation
+from gradcamutils import GradCam, GradCamPlusPlus, ScoreCam, build_guided_model, GuidedBackPropagation, superimpose, read_and_preprocess_img
 
 # Set the seed for hash based operations in python
 os.environ['PYTHONHASHSEED'] = '0'
@@ -79,24 +81,24 @@ def get_image_data():
     global normpneum_test_data; global normpneum_test_labels
 
     # Get normal-pneumonia lists
-    try:
-        normpneum_val_data, normpneum_val_labels, normpneum_test_data, normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
-        print("Try accepted: Loaded normal-pneumonial validation and test data")
-    except:
-        print("Except: Getting all normal-pneumonial image lists")
-        normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
-        normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
+    # try:
+    #     normpneum_val_data, normpneum_val_labels, normpneum_test_data, normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
+    #     print("Try accepted: Loaded normal-pneumonial validation and test data")
+    # except:
+    print("Except: Getting all normal-pneumonial image lists")
+    normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
+    normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
 
-        normpneum_val_data, normpneum_val_labels = decode_imgs_to_data(normpneum_val_dat)
-        normpneum_test_data, normpneum_test_labels = decode_imgs_to_data(normpneum_test_dat)
+    normpneum_val_data, normpneum_val_labels = decode_imgs_to_data(normpneum_val_dat)
+    normpneum_test_data, normpneum_test_labels = decode_imgs_to_data(normpneum_test_dat)
 
-        create_all_binary_files(
-                                normpneum_val_data, 
-                                normpneum_val_labels, 
-                                normpneum_test_data, 
-                                normpneum_test_labels,
-                                normpneum_bin_file_dir
-                                )
+    create_all_binary_files(
+                            normpneum_val_data, 
+                            normpneum_val_labels, 
+                            normpneum_test_data, 
+                            normpneum_test_labels,
+                            normpneum_bin_file_dir
+                            )
 
     # Globalise variables
     global bactviral_test_data; global bactviral_test_labels
@@ -104,24 +106,24 @@ def get_image_data():
     global bactviral_test_data; global bactviral_test_labels
 
     # Get bacterial-viral lists
-    try:
-        bactviral_val_data, bactviral_val_labels, bactviral_test_data, bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
-        print("Try accepted: Loaded bacterial-viral validation and test data")
-    except:
-        print("Except: Getting all bacterial-viral image lists")
-        normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
-        normpneum_test_dat, bactviral_test_dat  = create_image_data(test_data_dir)
+    # try:
+    #     bactviral_val_data, bactviral_val_labels, bactviral_test_data, bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
+    #     print("Try accepted: Loaded bacterial-viral validation and test data")
+    # except:
+    print("Except: Getting all bacterial-viral image lists")
+    normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
+    normpneum_test_dat, bactviral_test_dat  = create_image_data(test_data_dir)
 
-        bactviral_val_data, bactviral_val_labels = decode_imgs_to_data(bactviral_val_dat)
-        bactviral_test_data, bactviral_test_labels = decode_imgs_to_data(bactviral_test_dat)
+    bactviral_val_data, bactviral_val_labels = decode_imgs_to_data(bactviral_val_dat)
+    bactviral_test_data, bactviral_test_labels = decode_imgs_to_data(bactviral_test_dat)
 
-        create_all_binary_files(
-                                bactviral_val_data, 
-                                bactviral_val_labels, 
-                                bactviral_test_data, 
-                                bactviral_test_labels,
-                                bactviral_bin_file_dir
-                                )
+    create_all_binary_files(
+                            bactviral_val_data, 
+                            bactviral_val_labels, 
+                            bactviral_test_data, 
+                            bactviral_test_labels,
+                            bactviral_bin_file_dir
+                            )
 
     # Read training data
     normpneum_train_dat, bactviral_train_dat = create_image_data(train_data_dir)
@@ -209,8 +211,11 @@ def data_gen(data, batch_size):
             # cv2 reads in BGR mode by default
             orig_img = cv2.cvtColor(img_dat, cv2.COLOR_BGR2RGB)
             # normalize the image pixels
-            orig_img = img_dat.astype(np.float32)/255.
-
+            # orig_img = img_dat.astype(np.float32)/255.
+            # img_dat = tf.subtract(img_dat, input_mean)
+            # img_dat = tf.multiply(img_dat, 1.0 / input_std)
+            orig_img = (img.astype(np.float32) - 128) * (1/128)
+            orig_img = img_dat.astype(np.float32)
             batch_data[count] = orig_img
             batch_labels[count] = encoded_label
 
@@ -248,6 +253,10 @@ def decode_imgs_to_data(cases):
     labels = []
     # Append all images to dat and labels
     counter = 0
+
+    input_mean=128
+    input_std=128
+
     for img in cases:
         label = to_categorical(img[1], num_classes=2)
         img = mimg.imread(str(img[0]))
@@ -256,7 +265,9 @@ def decode_imgs_to_data(cases):
             img = np.dstack([img, img, img])
         else:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.astype(np.float32)/255.
+        img = (img.astype(np.float32) - 128) * (1/128)
+        # img = tf.subtract(img, input_mean)
+        # img = tf.multiply(img, 1.0 / input_std)
         dat.append(img)
         labels.append(label)
         counter += 1
@@ -319,74 +330,6 @@ def load_numpy_binary(file_path):
     # print(val_dat[0])
     return val_dat, val_labels, test_dat, test_labels
 
-
-def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
-    print("Start creating model")
-    # Get pretrained model
-    model = create_empty_model()
-
-    # More optimization of model training
-    es = EarlyStopping(patience=5)
-
-    # Fit the model
-    model.fit_generator(
-        train_data_generator,
-        steps_per_epoch = nb_train_steps,
-        epochs = nb_epochs,
-        validation_data = (val_data, val_labels),
-        callbacks=[es, chkpt]
-    )
-
-    return model
-
-def create_normpneum_model():
-    checkpoint = ModelCheckpoint(filepath='best_normpneum_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
-    
-    return create_model(
-        normpneum_train_data_gen,
-        normpneum_val_data, normpneum_val_labels, 
-        checkpoint, normpneum_nb_train_steps
-    )
-
-def create_bactviral_model():
-    checkpoint = ModelCheckpoint(filepath='best_bactviral_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
-    
-    return create_model(
-        bactviral_train_data_gen,
-        bactviral_val_data, bactviral_val_labels, 
-        checkpoint, bactviral_nb_train_steps
-    )
-
-
-get_image_data()
-
-normpneum_test_model = load_model('incresnetv2_normpneum_model.h5')
-bactviral_test_model = load_model('incresnetv2_bactviral_model.h5')
-
-
-def combined_classify():
-    #for case in normpneum_test_data:
-    normpneum_class_preds = normpneum_test_model.predict_classes(normpneum_test_data, batch_size=normpneum_batch_size)
-    # Save results in .csv-file
-    csv_path = normpneum_bin_file_dir + '.csv'
-    normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
-    normpneum_preds_df.to_csv(csv_path)
-
-    # Select pneumonial cases for next model
-    pneum_indices = np.where(normpneum_class_preds == 1)
-    pneum_cases = np.take(normpneum_test_data, pneum_indices)
-
-    # Predict selected cases with bacterial-viral model
-    bactviral_class_preds = bactviral_test_model(pneum_cases, batch_size=bactviral_batch_size)
-    # Save results in .csv-file
-    csv_path = bactviral_bin_file_dir + '.csv'
-    bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
-    bactviral_preds_df.to_csv(csv_path)
-    
-
-combined_classify()
-
-
 def create_empty_model():
     model = applications.inception_resnet_v2.InceptionResNetV2(
         include_top=False, #Default:(299,299,3)
@@ -413,24 +356,114 @@ def create_empty_model():
 
     return final_model
 
+def create_model(train_data_generator, val_data, val_labels, chkpt, nb_train_steps):
+    print("Start creating model")
+    # Get pretrained model
+    model = create_empty_model()
+
+    # More optimization of model training
+    es = EarlyStopping(patience=5)
+
+    # Fit the model
+    model.fit_generator(
+        train_data_generator,
+        steps_per_epoch = nb_train_steps,
+        epochs = nb_epochs,
+        validation_data = (val_data, val_labels),
+        callbacks=[es, chkpt]
+    )
+
+    return model
+
+def create_normpneum_model():
+    checkpoint = ModelCheckpoint(filepath='best_normpneum_newrange_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(
+        normpneum_train_data_gen,
+        normpneum_val_data, normpneum_val_labels, 
+        checkpoint, normpneum_nb_train_steps
+    )
+
+def create_bactviral_model():
+    checkpoint = ModelCheckpoint(filepath='best_bactviral_newrange_checkpoint.hdf5', save_best_only=True, save_weights_only=True)
+    
+    return create_model(
+        bactviral_train_data_gen,
+        bactviral_val_data, bactviral_val_labels, 
+        checkpoint, bactviral_nb_train_steps
+    )
+
+
+get_image_data()
+
+# Create & save best models
+normpneum_model = create_normpneum_model()
+normpneum_model.save('incv3_normpneum_model.h5')
+
+bactviral_model = create_bactviral_model()
+bactviral_model.save('incv3_bactviral_model.h5')
+
+# normpneum_test_model = load_model('incresnetv2_normpneum_model.h5')
+# bactviral_test_model = load_model('incresnetv2_bactviral_model.h5')
+
+
+# def combined_classify():
+#     #for case in normpneum_test_data:
+#     normpneum_class_preds = normpneum_test_model.predict_classes(normpneum_test_data, batch_size=normpneum_batch_size)
+#     # Save results in .csv-file
+#     csv_path = normpneum_bin_file_dir + '.csv'
+#     normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+#     normpneum_preds_df.to_csv(csv_path)
+
+#     # Select pneumonial cases for next model
+#     pneum_indices = np.where(normpneum_class_preds == 1)
+#     pneum_cases = np.take(normpneum_test_data, pneum_indices)
+
+#     # Predict selected cases with bacterial-viral model
+#     bactviral_class_preds = bactviral_test_model(pneum_cases, batch_size=bactviral_batch_size)
+#     # Save results in .csv-file
+#     csv_path = bactviral_bin_file_dir + '.csv'
+#     bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+#     bactviral_preds_df.to_csv(csv_path)
+    
+
+# combined_classify()
+
+# new_model = tf.keras.models.load_model('')
+
+# # Check its architecture
+# new_model.summary()
+
 
 # Example of testing bact vs viral
-test_model = create_empty_model()
-test_model.load_weights('best_bactviral_checkpoint.hdf5')
+# test_model = create_empty_model()
+# # test_model.summary()
 
-loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
-print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+# test_model.load_weights('best_normpneum_checkpoint.hdf5')
 
-# Get predictions
-preds = test_model.predict(bactviral_test_data, batch_size=16)
-preds = np.argmax(preds, axis=-1)
+# layer_name = 'block8_10_conv'
+# img_array = read_and_preprocess_img('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', size=(299,299))
 
-# Original labels
-orig_test_labels = np.argmax(bactviral_test_labels, axis=-1)
+# score_cam = ScoreCam(test_model,img_array,layer_name)
+# # score_cam_superimposed = superimpose('D:\Studie\Git-repos\pneumonia-babies\chest_xray\images\\train\BACTERIA\BACTERIA-558657-0001.jpeg', score_cam)
 
-cm  = confusion_matrix(orig_test_labels, preds)
-plt.figure()
-plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
-plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
-plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
-plt.show()
+# plt.imshow(score_cam)
+# # plt.imshow(score_cam_superimposed)
+# plt.show()
+
+# loss, acc = test_model.evaluate(normpneum_test_data,  normpneum_test_labels, verbose=2)
+# print('Restored model, accuracy: {:5.2f}%'.format(100*acc))
+
+# # Get predictions
+# preds = test_model.predict(normpneum_test_data, batch_size=16)
+# preds = np.argmax(preds, axis=-1)
+
+# # Original labels
+# orig_test_labels = np.argmax(normpneum_test_labels, axis=-1)
+
+# cm  = confusion_matrix(orig_test_labels, preds)
+# plt.figure()
+# plot_confusion_matrix(cm,figsize=(12,8), hide_ticks=True,cmap=plt.cm.Blues)
+# plt.xticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+# plt.yticks(range(2), ['Bacterial', 'Viral'], fontsize=16)
+# plt.show()
