@@ -82,10 +82,12 @@ def get_image_data():
     global normpneum_test_data; global normpneum_test_labels
     global normpneum_val_data; global normpneum_val_labels
     global normpneum_test_data; global normpneum_test_labels
+    global normpneum_test_dat; global bactviral_test_dat
 
     # Get normal-pneumonia lists
     try:
         normpneum_val_data, normpneum_val_labels, normpneum_test_data, normpneum_test_labels = load_numpy_binary(normpneum_bin_file_dir)
+        normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
         print("Try accepted: Loaded normal-pneumonial validation and test data")
     except:
     print("Except: Getting all normal-pneumonial image lists")
@@ -111,11 +113,18 @@ def get_image_data():
     # Get bacterial-viral lists
     try:
         bactviral_val_data, bactviral_val_labels, bactviral_test_data, bactviral_test_labels = load_numpy_binary(bactviral_bin_file_dir)
+        normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
         print("Try accepted: Loaded bacterial-viral validation and test data")
     except:
+<<<<<<< Updated upstream
     print("Except: Getting all bacterial-viral image lists")
     normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
     normpneum_test_dat, bactviral_test_dat  = create_image_data(test_data_dir)
+=======
+        print("Except: Getting all bacterial-viral image lists")
+        normpneum_val_dat, bactviral_val_dat = create_image_data(val_data_dir)
+        normpneum_test_dat, bactviral_test_dat = create_image_data(test_data_dir)
+>>>>>>> Stashed changes
 
     bactviral_val_data, bactviral_val_labels = decode_imgs_to_data(bactviral_val_dat)
     bactviral_test_data, bactviral_test_labels = decode_imgs_to_data(bactviral_test_dat)
@@ -133,6 +142,8 @@ def get_image_data():
     # Convert to pandas data frame
     normpneum_train_data = pd.DataFrame(normpneum_train_dat, columns=['image', 'label'], index=None)
     bactviral_train_data = pd.DataFrame(bactviral_train_dat, columns=['image', 'label'], index=None)
+    # Get file names
+    file_names_np_array(normpneum_test_dat, bactviral_test_dat)
 
     # Get a train data generators
     global normpneum_train_data_gen
@@ -144,6 +155,12 @@ def get_image_data():
     normpneum_nb_train_steps = normpneum_train_data.shape[0]//normpneum_batch_size
     bactviral_nb_train_steps = bactviral_train_data.shape[0]//bactviral_batch_size
 
+
+def file_names_np_array(normpneum, bactviral):
+    normpneum_name_list = [i[0] for i in normpneum]
+    bactviral_name_list = [i[0] for i in bactviral]
+    normpneum_name_list = np.array(normpneum_name_list)
+    bactviral_name_list = np.array(bactviral_name_list)
 
 def create_image_data(data_dir):
     # Dirs
@@ -499,6 +516,7 @@ bactviral_model = train_bactviral_model()
 #     bactviral_preds_df.to_csv(csv_path)
     
 
+<<<<<<< Updated upstream
 # combined_classify()
 
 # new_model = tf.keras.models.load_model('')
@@ -565,3 +583,88 @@ bactviral_model = train_bactviral_model()
 
 
 # statistics()
+=======
+def combined_classify_to_csv():
+    global normpneum_class_preds; global bactviral_class_preds
+
+    # Get predictions of normal-pneumonia model
+    try:
+        csv_path = normpneum_bin_file_dir + '.csv'
+        normpneum_res = pd.read_csv(csv_path).to_numpy()
+        normpneum_class_preds = normpneum_res[:,3]
+        print("Try succeeded: normal-pneumonia read from .csv-file")
+    except:
+        print("Except started: Start predicting Normal-Pneumonia cases")
+        normpneum_class_probs = normpneum_test_model.predict(normpneum_test_data, batch_size=normpneum_batch_size)
+        normpneum_class_preds = np.argmax(normpneum_class_probs, axis=-1)
+        csv_path = normpneum_bin_file_dir + '.csv'
+        # Create dataframe of results
+        normpneum_probs_df = pd.DataFrame(normpneum_class_probs)
+        normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+        normpneum_res_df = pd.concat(
+            [normpneum_probs_df.reset_index(drop=True),
+            normpneum_preds_df], 
+            axis=1
+            )
+        # Create dataframe of ground truth
+        normpneum_file_df = pd.DataFrame(normpneum_name_list)
+        normpneum_label_df = pd.DataFrame(normpneum_test_labels)
+        normpneum_gt_df = pd.concat(
+            [normpneum_file_df.reset_index(drop=True),
+            normpneum_label_df], 
+            axis=1
+            )
+        # Create complete dataframe of previous two dataframes
+        normpneum_complete_df = pd.concat(
+            [normpneum_res_df.reset_index(drop=True),
+            normpneum_gt_df], 
+            axis=1
+            )        
+        # Save results in .csv-file
+        normpneum_complete_df.to_csv(csv_path, header=False)
+
+    # Select pneumonial cases for next model
+    pneum_indices = np.where(normpneum_class_preds == 1)
+    #pneum_cases = np.take(normpneum_test_data, pneum_indices)
+    pneum_cases = np.array([normpneum_test_data[i] for i in pneum_indices])[0]
+
+    # Get predictions of bacterial-viral model
+    try:
+        csv_path = bactviral_bin_file_dir + '.csv'
+        bactviral_res = pd.read_csv(csv_path).to_numpy()
+        bactviral_class_preds = bactviral_res[:,3]
+        print("Try succeeded: Bacterial-Viral read from .csv-file")
+    except:
+        print("Except started: Start predicting Bacterial-Viral cases")
+        bactviral_class_probs = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
+        bactviral_class_preds = np.argmax(bactviral_class_probs, axis=-1)
+        # Save results in .csv-file
+        csv_path = bactviral_bin_file_dir + '.csv'
+        # Create dataframe of results
+        bactviral_probs_df = pd.DataFrame(bactviral_class_probs)
+        bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
+        bactviral_res_df = pd.concat(
+            [bactviral_probs_df.reset_index(drop=True),
+            bactviral_preds_df], 
+            axis=1
+            )
+        # Create dataframe of ground truth
+        bactviral_file_df = pd.DataFrame(bactviral_name_list)
+        bactviral_label_df = pd.DataFrame(bactviral_test_labels)
+        bactviral_gt_df = pd.concat(
+            [bactviral_file_df.reset_index(drop=True),
+            bactviral_label_df], 
+            axis=1
+            )
+        # Create complete dataframe of previous two dataframes
+        bactviral_complete_df = pd.concat(
+            [bactviral_res_df.reset_index(drop=True),
+            bactviral_gt_df], 
+            axis=1
+            )        
+        # Save results in .csv-file
+        bactviral_complete_df.to_csv(csv_path)
+
+
+combined_classify_to_csv()
+>>>>>>> Stashed changes
