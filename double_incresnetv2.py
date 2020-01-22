@@ -415,7 +415,7 @@ def create_empty_model():
 
 
 # Example of testing bact vs viral
-test_model = creat_empty_model()
+test_model = create_empty_model()
 test_model.load_weights('best_bactviral_checkpoint.hdf5')
 
 loss, acc = test_model.evaluate(bactviral_test_data,  bactviral_test_labels, verbose=2)
