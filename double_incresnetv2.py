@@ -417,24 +417,36 @@ bactviral_test_model.load_weights('best_bactviral_checkpoint.hdf5')
 
 def combined_classify_to_csv():
     # Get predictions of normal-pneumonia model
-    normpneum_class_preds = normpneum_test_model.predict(normpneum_test_data, batch_size=normpneum_batch_size)
-    normpneum_class_preds = np.argmax(normpneum_class_preds, axis=-1)
-    # Save results in .csv-file
-    csv_path = normpneum_bin_file_dir + '.csv'
-    normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
-    normpneum_preds_df.to_csv(csv_path)
+    try:
+        csv_path = normpneum_bin_file_dir + '.csv'
+        normpneum_res = pd.read_csv(csv_path).to_numpy()
+        normpneum_class_preds = normpneum_res[2,:]
+        print("Try succeeded: normal-pneumonia read from .csv-file")
+    except:
+        print("Except started: Start predicting Normal-Pneumonia cases")
+        normpneum_class_probs = normpneum_test_model.predict(normpneum_test_data, batch_size=normpneum_batch_size)
+        normpneum_class_preds = np.argmax(normpneum_class_probs, axis=-1)
+        # Save results in .csv-file
+        csv_path = normpneum_bin_file_dir + '.csv'
+        normpneum_probs_df = pd.DataFrame(normpneum_class_probs)
+        normpneum_preds_df = pd.DataFrame(normpneum_class_preds)
+        normpneum_res_df = pd.concat([normpneum_probs_df.reset_index(drop=True), normpneum_preds_df], axis=1)
+        normpneum_res_df.to_csv(csv_path, header=False)
 
     # Select pneumonial cases for next model
     pneum_indices = np.where(normpneum_class_preds == 1)
-    pneum_cases = np.take(normpneum_test_data, pneum_indices)
-
+    #pneum_cases = np.take(normpneum_test_data, pneum_indices)
+    pneum_cases = np.array([normpneum_test_data[i] for i in pneum_indices])[0]
     # Predict selected cases with bacterial-viral model
-    bactviral_class_preds = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
-    bactviral_class_preds = np.argmax(bactviral_class_preds, axis=-1)
+    print("Start predicting Bacterial-Viral cases")
+    bactviral_class_probs = bactviral_test_model.predict(pneum_cases, batch_size=bactviral_batch_size)
+    bactviral_class_preds = np.argmax(bactviral_class_probs, axis=-1)
     # Save results in .csv-file
     csv_path = bactviral_bin_file_dir + '.csv'
+    bactviral_probs_df = pd.DataFrame(bactviral_class_probs)
     bactviral_preds_df = pd.DataFrame(bactviral_class_preds)
-    bactviral_preds_df.to_csv(csv_path)
+    bactviral_res_df = pd.concat([bactviral_probs_df.reset_index(drop=True), bactviral_preds_df], axis=1)
+    bactviral_res_df.to_csv(csv_path)
 
 
 combined_classify_to_csv()
